@@ -1,0 +1,530 @@
+package example;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.*;
+import java.util.List;
+import java.util.Timer;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.jnativehook.GlobalScreen;
+import org.jnativehook.NativeHookException;
+import java.io.IOException;
+
+
+
+public class FolderList extends JFrame {
+    private JPanel folderPanel;
+    private JPanel taskPanel;
+    private JPanel currentTaskPanel;
+    private JScrollPane folderScrollPane;
+    private JScrollPane taskScrollPane;
+    private JButton addButton;
+    private List<Project> projects;
+    private String selectedProjectId;
+    private Timer timer;
+    private Task currentTask;
+    private Project currentProject;
+    private static final Color DARK_ORANGE = new Color(255, 140, 0);
+    private static final Color LIGHT_BLUE = new Color(173, 216, 230);
+    private static final Color DARK_BLUE = new Color(153, 204, 255);
+
+    private JLabel currentTaskLabel;
+    private JLabel currentTaskDetailsLabel;
+    private JButton startButton;
+    private JButton stopButton;
+
+
+    private JLabel globalTimerLabel;
+    private JButton startButtonGlobalTimer;
+    private JButton stopButtonGlobalTimer;
+    private long elapsedTimeBeforeStop = 0;
+
+    private Timer globalTimer;
+    private long globalStartTime;
+    private boolean isGlobalTimerRunning;
+
+    private static FolderList instance;
+    // Static method to get the singleton instance
+    public static FolderList getInstance() {
+        if (instance == null) {
+            instance = new FolderList();
+        }
+        return instance;
+    }
+    FolderList() {
+        setTitle("Project List");
+        setSize(800, 400);
+        setLocation(300, 100);
+        setLayout(null);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        startGlobalEventListener();
+
+
+
+        // Fetch projects from API
+        String apiUrl = "http://localhost:3000/getProjects";
+        String response = HttpUtil.sendGetRequest(apiUrl);
+
+        // Parse JSON response and initialize projects
+        projects = new ArrayList<>();
+        try {
+            JSONArray jsonArray = new JSONArray(response);
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                List<Task> tasks = new ArrayList<>();
+                JSONArray tasksArray = jsonObject.optJSONArray("tasks");
+                if (tasksArray != null) {
+                    for (int j = 0; j < tasksArray.length(); j++) {
+                        JSONObject taskObject = tasksArray.getJSONObject(j);
+                        Task task = new Task(
+                                taskObject.getString("id"),
+                                taskObject.getString("name"),
+                                taskObject.getString("duration")
+                        );
+                        tasks.add(task);
+                    }
+                }
+                Project project = new Project(
+                        jsonObject.getString("id"),
+                        jsonObject.getString("name"),
+                        tasks
+                );
+                projects.add(project);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        folderPanel = new JPanel();
+        folderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
+
+        folderScrollPane = new JScrollPane(folderPanel, JScrollPane.VERTICAL_SCROLLBAR_NEVER, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        folderScrollPane.setBounds(20, 100, 740, 100);
+        folderScrollPane.setBorder(null);
+        add(folderScrollPane);
+
+        taskPanel = new JPanel();
+        taskPanel.setLayout(new GridBagLayout());
+        taskPanel.setBackground(LIGHT_BLUE);
+
+        taskScrollPane = new JScrollPane(taskPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        taskScrollPane.setBounds(20, 250, 740, 110);
+        add(taskScrollPane);
+
+        addButton = new JButton("Add Project");
+        addButton.setBounds(670, 10, 120, 30);
+        addButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                showAddProjectDialog();
+            }
+        });
+        add(addButton);
+
+        // Panel to show current task information
+        currentTaskPanel = new JPanel();
+        currentTaskPanel.setLayout(new GridLayout(3, 1));
+        currentTaskPanel.setBounds(20, 10, 640, 80);
+        currentTaskPanel.setBackground(Color.LIGHT_GRAY);
+
+        currentTaskLabel = new JLabel("Current Task:");
+        currentTaskLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        currentTaskDetailsLabel = new JLabel("No task running");
+        currentTaskDetailsLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        globalTimerLabel = new JLabel("Global Timer: 00:00:00");
+        globalTimerLabel.setHorizontalAlignment(SwingConstants.LEFT);
+
+        startButton = new JButton("Start");
+        stopButton = new JButton("Stop");
+
+        stopButton.setEnabled(false);
+
+        startButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (currentTask != null) {
+                    startTimer(currentTask);
+                }
+            }
+        });
+
+        stopButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                stopTimer();
+            }
+        });
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        buttonPanel.add(startButton);
+        buttonPanel.add(stopButton);
+
+
+        startButtonGlobalTimer = new JButton("Start");
+        stopButtonGlobalTimer = new JButton("Stop");
+
+        stopButtonGlobalTimer.setEnabled(false);
+
+        startButtonGlobalTimer.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                startGlobalTimer();
+            }
+        });
+
+        stopButtonGlobalTimer.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                stopGlobalTimer();
+            }
+        });
+
+        JPanel buttonPanelGlobalTimer = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        buttonPanelGlobalTimer.add(startButtonGlobalTimer);
+        buttonPanelGlobalTimer.add(stopButtonGlobalTimer);
+
+        currentTaskPanel.add(currentTaskLabel);
+        currentTaskPanel.add(currentTaskDetailsLabel);
+        currentTaskPanel.add(globalTimerLabel);
+        currentTaskPanel.add(buttonPanel);
+        currentTaskPanel.add(buttonPanelGlobalTimer);
+
+
+        add(currentTaskPanel);
+
+        startGlobalTimer();
+
+
+        timer = new Timer();
+
+        selectedProjectId = projects.isEmpty() ? null : projects.get(0).getId();  // Select the first project if available
+        populateFolders();
+        if (selectedProjectId != null) {
+            showTasks(selectedProjectId);
+        }
+
+        setVisible(true);
+
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            public void componentResized(java.awt.event.ComponentEvent evt) {
+                onWindowResize();
+            }
+        });
+    }
+
+
+    private void startGlobalEventListener() {
+        Thread eventListenerThread = new Thread(() -> {
+            try {
+                GlobalEventListener listener = new GlobalEventListener();
+                listener.openLogFilePublic();
+                listener.startPeriodicLoggingPublic();
+
+                try {
+                    // Register the native hook
+                    GlobalScreen.registerNativeHook();
+
+                    // Add keyboard listener first
+                    GlobalScreen.addNativeKeyListener(listener);
+                    GlobalScreen.addNativeMouseMotionListener(listener);
+
+                    // Add a shutdown hook to unregister the native hook and close the log file
+                    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                        try {
+                            GlobalScreen.unregisterNativeHook();
+                            listener.closeLogFilePublic();
+                        } catch (NativeHookException | IOException e) {
+                            e.printStackTrace();
+                        }
+                    }));
+
+                } catch (NativeHookException e) {
+                    e.printStackTrace();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+        eventListenerThread.start();
+    }
+
+    private void showAddProjectDialog() {
+        JDialog addDialog = new JDialog(this, "Add New Project", true);
+        addDialog.setSize(300, 200);
+        addDialog.setLayout(new GridLayout(3, 1));
+
+        JTextField nameField = new JTextField();
+        JButton addProjectButton = new JButton("Add Project");
+
+        addDialog.add(new JLabel("Project Name:"));
+        addDialog.add(nameField);
+
+        addProjectButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String projectName = nameField.getText().trim();
+                if (!projectName.isEmpty()) {
+                    Project newProject = new Project(UUID.randomUUID().toString(), projectName, new ArrayList<>());
+                    projects.add(newProject);
+                    populateFolders();
+                    selectedProjectId = newProject.getId();
+                    showTasks(selectedProjectId);
+
+                    // Send HTTP request to the Node.js API
+                    String apiUrl = "http://localhost:3000/addProject";
+                    String jsonPayload = "{\"name\":\"" + projectName + "\"}";
+                    HttpUtil.sendPostRequest(apiUrl, jsonPayload);
+
+                    addDialog.dispose();
+                } else {
+                    JOptionPane.showMessageDialog(addDialog, "Project name cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        addDialog.add(addProjectButton);
+
+        addDialog.setLocationRelativeTo(this);
+        addDialog.setVisible(true);
+    }
+
+    private void populateFolders() {
+        folderPanel.removeAll();
+        for (Project project : projects) {
+            JLabel folderLabel = new JLabel(project.getName());
+            folderLabel.setPreferredSize(new Dimension(150, 100));
+            folderLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            folderLabel.setVerticalAlignment(SwingConstants.CENTER);
+            folderLabel.setOpaque(true);
+            folderLabel.setBackground(project.getId().equals(selectedProjectId) ? DARK_ORANGE : Color.ORANGE);
+            folderLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+            folderLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+                public void mouseClicked(java.awt.event.MouseEvent evt) {
+                    selectedProjectId = project.getId();
+                    populateFolders();  // Refresh folders to update selection
+                    showTasks(selectedProjectId);
+                }
+            });
+            folderPanel.add(folderLabel);
+        }
+        folderPanel.revalidate();
+        folderPanel.repaint();
+    }
+
+    private void showTasks(String projectId) {
+        taskPanel.removeAll();
+        Project selectedProject = projects.stream().filter(p -> p.getId().equals(projectId)).findFirst().orElse(null);
+        if (selectedProject == null) {
+            JLabel noTasksLabel = new JLabel("No tasks available.");
+            noTasksLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridx = 0;
+            gbc.gridy = 0;
+            taskPanel.add(noTasksLabel, gbc);
+            taskPanel.revalidate();
+            taskPanel.repaint();
+            return;
+        }
+
+        List<Task> tasks = selectedProject.getTasks();
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(5, 5, 5, 5);
+
+        int row = 0;
+        for (Task task : tasks) {
+            gbc.gridx = 0;
+            gbc.gridy = row++;
+            JLabel taskLabel = new JLabel(task.getName() + " - Time Spent: " + task.getTimeSpent());
+            taskLabel.setPreferredSize(new Dimension(500, 40));
+            taskLabel.setBackground(task == currentTask ? DARK_BLUE : LIGHT_BLUE);
+            taskLabel.setOpaque(true);
+            taskLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+
+            JButton startButton = new JButton("Start");
+            startButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    startTimer(task);
+                }
+            });
+
+            JButton stopButton = new JButton("Stop");
+            stopButton.setEnabled(task == currentTask);
+            stopButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    stopTimer();
+                }
+            });
+
+            JButton deleteButton = new JButton("Delete");
+            deleteButton.setEnabled(task != currentTask); // Disable delete for current task
+            deleteButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this task?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+                    if (result == JOptionPane.YES_OPTION) {
+                        selectedProject.getTasks().remove(task);
+                        showTasks(selectedProject.getId());
+                    }
+                }
+            });
+
+            gbc.gridx = 1;
+            taskPanel.add(taskLabel, gbc);
+            gbc.gridx = 2;
+            taskPanel.add(startButton, gbc);
+            gbc.gridx = 3;
+            taskPanel.add(stopButton, gbc);
+            gbc.gridx = 4;
+            taskPanel.add(deleteButton, gbc);
+        }
+
+        // Add Add Task button
+        JButton addTaskButton = new JButton("Add Task");
+        addTaskButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                showAddTaskDialog(selectedProject);
+            }
+        });
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.anchor = GridBagConstraints.CENTER;
+        taskPanel.add(addTaskButton, gbc);
+
+        taskPanel.revalidate();
+        taskPanel.repaint();
+    }
+    private void showAddTaskDialog(Project project) {
+        JDialog addDialog = new JDialog(this, "Add New Task", true);
+        addDialog.setSize(300, 150);
+        addDialog.setLayout(new GridLayout(2, 1));
+
+        JTextField nameField = new JTextField();
+        JButton addTaskButton = new JButton("Add Task");
+
+        addDialog.add(new JLabel("Task Name:"));
+        addDialog.add(nameField);
+
+        addTaskButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String taskName = nameField.getText().trim();
+                if (!taskName.isEmpty()) {
+                    Task newTask = new Task(UUID.randomUUID().toString(), taskName, "00:00:00");
+                    project.getTasks().add(newTask);
+                    showTasks(project.getId());
+                    addDialog.dispose();
+                } else {
+                    JOptionPane.showMessageDialog(addDialog, "Task name cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        addDialog.add(addTaskButton);
+
+        addDialog.setLocationRelativeTo(this);
+        addDialog.setVisible(true);
+    }
+
+    private void startTimer(Task task) {
+        stopTimer();  // Stop any existing timer
+        currentTask = task;
+        currentProject = projects.stream().filter(p -> p.getId().equals(selectedProjectId)).findFirst().orElse(null);
+        currentTaskDetailsLabel.setText(currentProject.getName() + " - " + currentTask.getName() + " - Time Spent: " + currentTask.getTimeSpent());
+        startButton.setEnabled(false);
+        stopButton.setEnabled(true);
+
+        timer = new Timer();
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateTimeSpent();
+                    }
+                });
+            }
+        }, 1000, 1000);
+    }
+
+    private void stopTimer() {
+        if (timer != null) {
+            timer.cancel();
+        }
+        currentTask = null;
+        currentProject = null;
+        currentTaskDetailsLabel.setText("No task running");
+        startButton.setEnabled(true);
+        stopButton.setEnabled(false);
+        showTasks(selectedProjectId);  // Refresh task list to remove highlighting
+    }
+
+    private void updateTimeSpent() {
+        if (currentTask != null) {
+            currentTask.incrementTimeSpent();
+            currentTaskDetailsLabel.setText(currentProject.getName() + " - " + currentTask.getName() + " - Time Spent: " + currentTask.getTimeSpent());
+            showTasks(selectedProjectId);  // Refresh task list to update time spent
+        }
+    }
+
+
+    private void startGlobalTimer() {
+        if (isGlobalTimerRunning) {
+            return;
+        }
+        globalStartTime = System.currentTimeMillis() - elapsedTimeBeforeStop;;
+        globalTimer = new Timer();
+        globalTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                SwingUtilities.invokeLater(() -> updateGlobalTimer());
+            }
+        }, 1000, 1000);
+        isGlobalTimerRunning = true;
+        startButtonGlobalTimer.setEnabled(false);
+        stopButtonGlobalTimer.setEnabled(true);
+    }
+
+    private void stopGlobalTimer() {
+        if (globalTimer != null) {
+            globalTimer.cancel();
+            globalTimer = null;
+        }
+        elapsedTimeBeforeStop = System.currentTimeMillis() - globalStartTime;
+        isGlobalTimerRunning = false;
+        startButtonGlobalTimer.setEnabled(true);
+        stopButtonGlobalTimer.setEnabled(false);
+    }
+
+    private void updateGlobalTimer() {
+        long elapsedTime = System.currentTimeMillis() - globalStartTime;
+        int seconds = (int) (elapsedTime / 1000) % 60;
+        int minutes = (int) (elapsedTime / 60000) % 60;
+        int hours = (int) (elapsedTime / 3600000);
+        globalTimerLabel.setText(String.format("Global Timer: %02d:%02d:%02d", hours, minutes, seconds));
+    }
+
+
+    private void onWindowResize() {
+        int frameWidth = getWidth();
+        folderScrollPane.setBounds(20, 100, frameWidth - 40, 100);
+        taskScrollPane.setBounds(20, 250, frameWidth - 40, getHeight() - 310);
+        addButton.setBounds(frameWidth - 130, 10, 120, 30);
+        currentTaskPanel.setBounds(20, 10, frameWidth - 180, 80);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                new FolderList();
+            }
+        });
+    }
+}

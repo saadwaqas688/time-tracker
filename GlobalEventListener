@@ -1,0 +1,180 @@
+package example;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import org.jnativehook.GlobalScreen;
+import org.jnativehook.NativeHookException;
+import org.jnativehook.keyboard.NativeKeyEvent;
+import org.jnativehook.keyboard.NativeKeyListener;
+import org.jnativehook.mouse.NativeMouseEvent;
+import org.jnativehook.mouse.NativeMouseMotionListener;
+
+import javax.swing.*;
+
+public class GlobalEventListener implements NativeKeyListener, NativeMouseMotionListener{
+
+    private static final String LOG_FILE = "user_activity.log";
+    private BufferedWriter writer;
+    private int mouseMoveCount = 0;
+    private int keyPressCount = 0;
+    private static final long IDLE_THRESHOLD = 30000; // 30 seconds in milliseconds
+    private GlobalTimer globalTimer;
+    private long lastActivityTime = System.currentTimeMillis();
+
+    private void resetIdleState() {
+        lastActivityTime = System.currentTimeMillis();
+        mouseMoveCount = 0;
+        keyPressCount = 0;
+    }
+
+    public GlobalEventListener() {
+        globalTimer = new GlobalTimer();
+        globalTimer.start();
+        startIdleTracking();
+    }
+
+    public static void main(String[] args) throws IOException {
+        GlobalEventListener listener = new GlobalEventListener();
+        listener.openLogFile();
+        listener.startPeriodicLogging();
+
+        try {
+            // Register the native hook
+            GlobalScreen.registerNativeHook();
+
+            // Add keyboard listener first
+            GlobalScreen.addNativeKeyListener(listener);
+            GlobalScreen.addNativeMouseMotionListener(listener);
+
+            // Add a shutdown hook to unregister the native hook and close the log file
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                try {
+                    GlobalScreen.unregisterNativeHook();
+                    listener.closeLogFile();
+                } catch (NativeHookException | IOException e) {
+                    e.printStackTrace();
+                }
+            }));
+
+        } catch (NativeHookException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void openLogFilePublic() throws IOException {
+        openLogFile();
+    }
+
+    public void closeLogFilePublic() throws IOException {
+        closeLogFile();
+    }
+
+    private void openLogFile() throws IOException {
+        writer = new BufferedWriter(new FileWriter(LOG_FILE, true)); // Append to existing file
+    }
+
+    private void closeLogFile() throws IOException {
+        if (writer != null) {
+            writer.close();
+        }
+    }
+
+    private void logEvent(String message) throws IOException {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String timestamp = dateFormat.format(new Date());
+        writer.write(timestamp + ": " + message + "\n");
+        writer.flush();
+    }
+
+    public void startPeriodicLoggingPublic() {
+        startPeriodicLogging();
+    }
+
+    private void startPeriodicLogging() {
+        Timer timer = new Timer();
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    logEvent("Mouse Moves: " + mouseMoveCount + ", Key Presses: " + keyPressCount);
+                    mouseMoveCount = 0; // Reset the count after logging
+                    keyPressCount = 0;  // Reset the count after logging
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, 0, 15000); // 15000 ms = 15 seconds
+    }
+
+    public void startGlobalTimer() {
+        globalTimer.start();
+    }
+    public void startIdleTracking() {
+        Timer idleTimer = new Timer();
+        idleTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                long currentTime = System.currentTimeMillis();
+                long idleTime = currentTime - lastActivityTime;
+                if (idleTime >= IDLE_THRESHOLD) {
+                    showIdleAlert();
+                }
+            }
+        }, 0, 1000); // Check every second
+    }
+
+    @Override
+    public void nativeKeyPressed(NativeKeyEvent e) {
+        keyPressCount++;
+        lastActivityTime = System.currentTimeMillis();
+    }
+
+    @Override
+    public void nativeMouseMoved(NativeMouseEvent e) {
+        mouseMoveCount++;
+        lastActivityTime = System.currentTimeMillis();
+    }
+
+    private void showIdleAlert() {
+        new Thread(() -> {
+            int countdown = 60; // Countdown from 60 seconds
+            while (countdown > 0) {
+                int result = JOptionPane.showConfirmDialog(null, "You've been idle for 30 seconds! Countdown: " + countdown, "Idle Alert", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+                if (result == JOptionPane.CANCEL_OPTION) {
+                    resetIdleState();
+                    return;
+                }
+                countdown--;
+                try {
+                    Thread.sleep(1000); // 1 second delay
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            globalTimer.stop();
+        }).start();
+    }
+
+
+
+    @Override
+    public void nativeKeyReleased(NativeKeyEvent e) {
+        // Optional handling for key release events
+    }
+
+    @Override
+    public void nativeKeyTyped(NativeKeyEvent e) {
+        // Optional handling for key typed events
+    }
+
+    @Override
+    public void nativeMouseDragged(NativeMouseEvent e) {
+        // Optional handling for mouse drag events
+    }
+}

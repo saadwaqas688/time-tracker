@@ -1,0 +1,40 @@
+
+package example;
+public class Task {
+    private String id;
+    private String name;
+    private int timeSpent; // Time spent in seconds
+
+    public Task(String id, String name, String timeSpent) {
+        this.id = id;
+        this.name = name;
+        this.timeSpent = parseTimeSpent(timeSpent);
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getTimeSpent() {
+        int hours = timeSpent / 3600;
+        int minutes = (timeSpent % 3600) / 60;
+        int seconds = timeSpent % 60;
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+    }
+
+    public void incrementTimeSpent() {
+        timeSpent++;
+    }
+
+    private int parseTimeSpent(String timeSpent) {
+        String[] parts = timeSpent.split(":");
+        int hours = Integer.parseInt(parts[0]);
+        int minutes = Integer.parseInt(parts[1]);
+        int seconds = Integer.parseInt(parts[2]);
+        return (hours * 3600) + (minutes * 60) + seconds;
+    }
+}
