@@ -1,0 +1,112 @@
+package org.example;
+
+import javax.swing.*;
+import java.awt.*;
+
+public class FolderList extends JFrame {
+
+    private static final Color GREEN = new Color(0, 255, 0);
+    private static final Color TIMER_COLOR = new Color(0, 128, 0);
+    private static final Color ADD_PROJECT_COLOR = new Color(0, 0, 0);
+    private static final Color FOLDER_COLOR = new Color(255, 204, 204);
+    private static final Color SEARCH_COLOR = new Color(204, 255, 204);
+    private static final Color TASK_PANEL_COLOR = new Color(204, 204, 255);
+
+    public FolderList() {
+        setTitle("Custom Window");
+        setSize(800, 600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(null);
+
+        // Side Panel
+        JPanel sidePanel = new JPanel();
+        sidePanel.setBounds(0, 0, (int) (1.5 * 96), getHeight()); // 1.5 inches wide
+        sidePanel.setBackground(GREEN);
+        sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.Y_AXIS));
+
+        JButton button1 = new JButton("Button 1");
+        JButton button2 = new JButton("Button 2");
+        JButton button3 = new JButton("Button 3");
+        sidePanel.add(button1);
+        sidePanel.add(button2);
+        sidePanel.add(button3);
+        add(sidePanel);
+
+        // Timer Panel
+        JPanel timerPanel = new JPanel();
+        timerPanel.setBounds((int) (1.5 * 96), 0, getWidth() - (int) (1.5 * 96), (int) (0.5 * 96)); // Height 0.5 inches
+        timerPanel.setBackground(TIMER_COLOR);
+        timerPanel.setLayout(new BorderLayout());
+
+        JLabel timerLabel = new JLabel("00:00:00", SwingConstants.LEFT);
+        JLabel usernameLabel = new JLabel("Username", SwingConstants.RIGHT);
+
+        timerPanel.add(timerLabel, BorderLayout.WEST);
+        timerPanel.add(usernameLabel, BorderLayout.EAST);
+        add(timerPanel);
+
+        // Add Project Button
+        JButton addProjectButton = new JButton("Add Project");
+        addProjectButton.setBackground(ADD_PROJECT_COLOR);
+        addProjectButton.setBounds(getWidth() - 150, (int) (0.5 * 96 + 10), 120, 30);
+        add(addProjectButton);
+
+        // Folder Panel
+        JPanel folderPanel = new JPanel();
+        folderPanel.setBounds((int) (1.5 * 96), (int) (0.5 * 96 + 40), getWidth() - (int) (1.5 * 96), (int) (1.5 * 96) - 40); // Adjusted to avoid overlap
+        folderPanel.setBackground(FOLDER_COLOR);
+        folderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
+
+        // Adding 10 dummy projects
+        for (int i = 1; i <= 10; i++) {
+            JButton projectButton = new JButton("Project " + i);
+            projectButton.setPreferredSize(new Dimension(100, 30)); // Set preferred size for buttons
+            folderPanel.add(projectButton);
+        }
+
+        JScrollPane folderScrollPane = new JScrollPane(folderPanel);
+        folderScrollPane.setBounds((int) (1.5 * 96), (int) (0.5 * 96 + 40), getWidth() - (int) (1.5 * 96), (int) (1.5 * 96) - 40); // Adjusted to avoid overlap
+        folderScrollPane.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        folderScrollPane.getVerticalScrollBar().setUnitIncrement(16); // Adjust scrollbar sensitivity
+
+        add(folderScrollPane);
+
+        // Search Panel
+        JPanel searchPanel = new JPanel();
+        searchPanel.setBounds((int) (1.5 * 96), (int) (0.5 * 96 + 1.5 * 96 + 40), getWidth() - (int) (1.5 * 96), (int) (0.3 * 96));
+        searchPanel.setBackground(SEARCH_COLOR);
+        searchPanel.setLayout(new BorderLayout());
+
+        JTextField searchField = new JTextField();
+        searchField.setPreferredSize(new Dimension(200, 30)); // Set preferred size for text field
+        JButton addTaskButton = new JButton("Add Task");
+
+        searchPanel.add(searchField, BorderLayout.WEST);
+        searchPanel.add(addTaskButton, BorderLayout.EAST);
+        add(searchPanel);
+
+        // Task Panel
+        JPanel taskPanel = new JPanel();
+        taskPanel.setBounds((int) (1.5 * 96), (int) (0.5 * 96 + 1.5 * 96 + 0.3 * 96 + 40), getWidth() - (int) (1.5 * 96), getHeight() - (int) (0.5 * 96 + 1.5 * 96 + 0.3 * 96 + 40));
+        taskPanel.setBackground(TASK_PANEL_COLOR);
+        taskPanel.setLayout(new BorderLayout());
+
+        String[] columnNames = {"Name", "Description", "Create Date", "Status", "Total Time"};
+        Object[][] data = {
+                {"Task 1", "Description 1", "2024-07-23", "Open", "00:00:00"},
+                {"Task 2", "Description 2", "2024-07-23", "In Progress", "00:00:00"}
+        };
+
+        JTable table = new JTable(data, columnNames);
+        JScrollPane tableScrollPane = new JScrollPane(table);
+
+        taskPanel.add(tableScrollPane, BorderLayout.CENTER);
+        add(taskPanel);
+
+        setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(FolderList::new);
+    }
+}

@@ -1,4 +1,4 @@
-package example;
+package org.example;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -15,6 +15,7 @@ import java.io.IOException;
 
 
 public class FolderList extends JFrame {
+    private JPanel sidePanel;
     private JPanel folderPanel;
     private JPanel taskPanel;
     private JPanel currentTaskPanel;
@@ -55,7 +56,8 @@ public class FolderList extends JFrame {
     }
     FolderList() {
         setTitle("Project List");
-        setSize(800, 400);
+        getContentPane().setBackground(new Color(0, 36, 51));
+        setSize(1200, 700);
         setLocation(300, 100);
         setLayout(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -97,12 +99,28 @@ public class FolderList extends JFrame {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        sidePanel = new JPanel();
+        sidePanel.setPreferredSize(new Dimension(108, getHeight()));  // Adjust height to match frame
+        sidePanel.setBackground(new Color(60, 63, 65)); // Set a background color (optional)
+        sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.Y_AXIS));
+
+// Add buttons or other components to the side panel
+        JButton button1 = new JButton("Button 1");
+        JButton button2 = new JButton("Button 2");
+        sidePanel.add(button1);
+        sidePanel.add(button2);
+
+        getContentPane().setLayout(new BorderLayout());
+        getContentPane().add(sidePanel, BorderLayout.WEST);
+
+
 
         folderPanel = new JPanel();
         folderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
 
+
         folderScrollPane = new JScrollPane(folderPanel, JScrollPane.VERTICAL_SCROLLBAR_NEVER, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        folderScrollPane.setBounds(20, 100, 740, 100);
+        folderScrollPane.setBounds(20, 100, 640, 100);
         folderScrollPane.setBorder(null);
         add(folderScrollPane);
 
