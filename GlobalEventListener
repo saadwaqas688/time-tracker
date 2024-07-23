@@ -23,9 +23,11 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
     private BufferedWriter writer;
     private int mouseMoveCount = 0;
     private int keyPressCount = 0;
-    private static final long IDLE_THRESHOLD = 30000; // 30 seconds in milliseconds
+    private static final long IDLE_THRESHOLD = 5000; // 30 seconds in milliseconds
     private GlobalTimer globalTimer;
     private long lastActivityTime = System.currentTimeMillis();
+    private boolean popupShown = false; // Flag to track if popup has been shown
+
 
     private void resetIdleState() {
         lastActivityTime = System.currentTimeMillis();
@@ -122,7 +124,7 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
             public void run() {
                 long currentTime = System.currentTimeMillis();
                 long idleTime = currentTime - lastActivityTime;
-                if (idleTime >= IDLE_THRESHOLD) {
+                if (idleTime >= IDLE_THRESHOLD && !popupShown) {
                     showIdleAlert();
                 }
             }
@@ -133,15 +135,20 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
     public void nativeKeyPressed(NativeKeyEvent e) {
         keyPressCount++;
         lastActivityTime = System.currentTimeMillis();
+        popupShown = false; // Reset popupShown when activity is detected
+
     }
 
     @Override
     public void nativeMouseMoved(NativeMouseEvent e) {
         mouseMoveCount++;
         lastActivityTime = System.currentTimeMillis();
+        popupShown = false; // Reset popupShown when activity is detected
+
     }
 
     private void showIdleAlert() {
+        popupShown = true; // Set flag to indicate that popup is shown
         new Thread(() -> {
             int countdown = 60; // Countdown from 60 seconds
             while (countdown > 0) {
