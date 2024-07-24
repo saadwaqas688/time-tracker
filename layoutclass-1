@@ -55,7 +55,7 @@ public class FolderList extends JFrame {
         timerPanel.add(usernameLabel, BorderLayout.EAST);
         mainPanel.add(timerPanel, BorderLayout.NORTH);
 
-        // Center Panel (contains Add Project Panel, Folder Panel, Search Panel, Task Panel)
+        // Center Panel (contains Add Project Panel, Folder and Search Panels, Task Panel)
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BorderLayout(MARGIN_SIZE, MARGIN_SIZE));
 
@@ -74,7 +74,7 @@ public class FolderList extends JFrame {
 
         // Folder and Search Panel Container
         JPanel folderSearchPanel = new JPanel();
-        folderSearchPanel.setLayout(new BorderLayout(MARGIN_SIZE, MARGIN_SIZE));
+        folderSearchPanel.setLayout(new BoxLayout(folderSearchPanel, BoxLayout.Y_AXIS));
 
         // Folder Panel
         JPanel folderPanel = new JPanel();
@@ -95,7 +95,7 @@ public class FolderList extends JFrame {
         folderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
         folderScrollPane.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
         folderScrollPane.getHorizontalScrollBar().setUnitIncrement(16); // Adjust horizontal scrollbar sensitivity
-        folderSearchPanel.add(folderScrollPane, BorderLayout.NORTH);
+        folderSearchPanel.add(folderScrollPane);
 
         // Search Panel
         JPanel searchPanel = new JPanel();
@@ -110,7 +110,7 @@ public class FolderList extends JFrame {
 
         searchPanel.add(searchField, BorderLayout.WEST);
         searchPanel.add(addTaskButton, BorderLayout.EAST);
-        folderSearchPanel.add(searchPanel, BorderLayout.SOUTH);
+      folderSearchPanel.add(searchPanel);
 
         centerPanel.add(folderSearchPanel, BorderLayout.CENTER);
 
