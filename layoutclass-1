@@ -13,17 +13,20 @@ public class FolderList extends JFrame {
     private static final Color TASK_PANEL_COLOR = new Color(204, 204, 255);
     private static final Color ADD_PROJECT_PANEL_COLOR = new Color(204, 255, 204);
 
+    private static final int MARGIN_SIZE = 5;
+
     public FolderList() {
         setTitle("Custom Window");
         setSize(1200, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout());
+        setLayout(new BorderLayout(MARGIN_SIZE, MARGIN_SIZE));
 
         // Side Panel
         JPanel sidePanel = new JPanel();
         sidePanel.setPreferredSize(new Dimension(144, getHeight())); // Fixed width of 144 pixels
         sidePanel.setBackground(GREEN);
         sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.Y_AXIS));
+        sidePanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
 
         JButton button1 = new JButton("Button 1");
         JButton button2 = new JButton("Button 2");
@@ -35,13 +38,15 @@ public class FolderList extends JFrame {
 
         // Main Panel (contains all other panels)
         JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BorderLayout());
+        mainPanel.setLayout(new BorderLayout(MARGIN_SIZE, MARGIN_SIZE));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
 
         // Timer Panel
         JPanel timerPanel = new JPanel();
         timerPanel.setPreferredSize(new Dimension(getWidth(), 48)); // Fixed height of 48 pixels
         timerPanel.setBackground(TIMER_COLOR);
         timerPanel.setLayout(new BorderLayout());
+        timerPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
 
         JLabel timerLabel = new JLabel("00:00:00", SwingConstants.LEFT);
         JLabel usernameLabel = new JLabel("Username", SwingConstants.RIGHT);
@@ -52,13 +57,14 @@ public class FolderList extends JFrame {
 
         // Center Panel (contains Add Project Panel, Folder Panel, Search Panel, Task Panel)
         JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new BorderLayout());
+        centerPanel.setLayout(new BorderLayout(MARGIN_SIZE, MARGIN_SIZE));
 
         // Add Project Panel
         JPanel addProjectPanel = new JPanel();
         addProjectPanel.setPreferredSize(new Dimension(getWidth(), 40));
         addProjectPanel.setLayout(new BorderLayout());
         addProjectPanel.setBackground(ADD_PROJECT_PANEL_COLOR);
+        addProjectPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
 
         JButton addProjectButton = new JButton("Add Project");
         addProjectButton.setBackground(ADD_PROJECT_COLOR);
@@ -68,12 +74,14 @@ public class FolderList extends JFrame {
 
         // Folder and Search Panel Container
         JPanel folderSearchPanel = new JPanel();
-        folderSearchPanel.setLayout(new BorderLayout());
+        folderSearchPanel.setLayout(new BorderLayout(MARGIN_SIZE, MARGIN_SIZE));
 
         // Folder Panel
         JPanel folderPanel = new JPanel();
+        folderPanel.setPreferredSize(new Dimension(getWidth(), 150));
         folderPanel.setBackground(FOLDER_COLOR);
         folderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        folderPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
 
         // Adding 10 dummy projects
         for (int i = 1; i <= 10; i++) {
@@ -83,8 +91,10 @@ public class FolderList extends JFrame {
         }
 
         JScrollPane folderScrollPane = new JScrollPane(folderPanel);
-        folderScrollPane.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-        folderScrollPane.getVerticalScrollBar().setUnitIncrement(16); // Adjust scrollbar sensitivity
+        folderScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        folderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+        folderScrollPane.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+        folderScrollPane.getHorizontalScrollBar().setUnitIncrement(16); // Adjust horizontal scrollbar sensitivity
         folderSearchPanel.add(folderScrollPane, BorderLayout.NORTH);
 
         // Search Panel
@@ -92,6 +102,7 @@ public class FolderList extends JFrame {
         searchPanel.setPreferredSize(new Dimension(getWidth(), 29)); // Fixed height of 29 pixels
         searchPanel.setBackground(SEARCH_COLOR);
         searchPanel.setLayout(new BorderLayout());
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
 
         JTextField searchField = new JTextField();
         searchField.setPreferredSize(new Dimension(200, 30)); // Set preferred size for text field
@@ -107,6 +118,7 @@ public class FolderList extends JFrame {
         JPanel taskPanel = new JPanel();
         taskPanel.setBackground(TASK_PANEL_COLOR);
         taskPanel.setLayout(new BorderLayout());
+        taskPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
 
         String[] columnNames = {"Name", "Description", "Create Date", "Status", "Total Time"};
         Object[][] data = {
