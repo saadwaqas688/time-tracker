@@ -14,7 +14,6 @@ public class FolderList extends JFrame {
     private static final Color ADD_PROJECT_PANEL_COLOR = new Color(204, 255, 204);
     private static final Color MAIN_WINDOW_COLOR = new Color(255, 0, 0); // Red color for the main window
 
-
     private static final int MARGIN_SIZE = 5;
 
     public FolderList() {
@@ -38,12 +37,11 @@ public class FolderList extends JFrame {
         sidePanel.add(button3);
         add(sidePanel, BorderLayout.WEST);
 
-        // Main Panel (contains all other panels)
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BorderLayout(MARGIN_SIZE, MARGIN_SIZE));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
-        mainPanel.setBackground(MAIN_WINDOW_COLOR);
-        mainPanel.setOpaque(true);
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS)); // Use BoxLayout for vertical stacking
+        centerPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+        centerPanel.setBackground(MAIN_WINDOW_COLOR);
+
         // Timer Panel
         JPanel timerPanel = new JPanel();
         timerPanel.setPreferredSize(new Dimension(getWidth(), 48)); // Fixed height of 48 pixels
@@ -56,11 +54,9 @@ public class FolderList extends JFrame {
 
         timerPanel.add(timerLabel, BorderLayout.WEST);
         timerPanel.add(usernameLabel, BorderLayout.EAST);
-        mainPanel.add(timerPanel, BorderLayout.NORTH);
+        centerPanel.add(timerPanel);
+        centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE)); // Add vertical gap
 
-        // Center Panel (contains Add Project Panel, Folder Panel, Search Panel, Task Panel)
-        JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS)); // Use BoxLayout for vertical stacking
 
         // Add Project Panel
         JPanel addProjectPanel = new JPanel();
@@ -74,6 +70,8 @@ public class FolderList extends JFrame {
         addProjectButton.setPreferredSize(new Dimension(120, 30));
         addProjectPanel.add(addProjectButton, BorderLayout.EAST);
         centerPanel.add(addProjectPanel);
+        centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE)); // Add vertical gap
+
 
         // Folder Panel
         JPanel folderPanel = new JPanel();
@@ -94,7 +92,8 @@ public class FolderList extends JFrame {
         folderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
         folderScrollPane.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
         folderScrollPane.getHorizontalScrollBar().setUnitIncrement(16); // Adjust horizontal scrollbar sensitivity
-        centerPanel.add(folderScrollPane); // Add Folder Panel
+        centerPanel.add(folderScrollPane);
+        centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE)); // Add vertical gap
 
         // Search Panel
         JPanel searchPanel = new JPanel();
@@ -109,7 +108,9 @@ public class FolderList extends JFrame {
 
         searchPanel.add(searchField, BorderLayout.WEST);
         searchPanel.add(addTaskButton, BorderLayout.EAST);
-        centerPanel.add(searchPanel); // Add Search Panel
+        centerPanel.add(searchPanel);
+        centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE)); // Add vertical gap
+
 
         // Task Panel
         JPanel taskPanel = new JPanel();
@@ -127,10 +128,9 @@ public class FolderList extends JFrame {
         JScrollPane tableScrollPane = new JScrollPane(table);
 
         taskPanel.add(tableScrollPane, BorderLayout.CENTER);
-        centerPanel.add(taskPanel); // Add Task Panel
+        centerPanel.add(taskPanel);
 
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
-        add(mainPanel, BorderLayout.CENTER);
+        add(centerPanel, BorderLayout.CENTER);
 
         setVisible(true);
     }
