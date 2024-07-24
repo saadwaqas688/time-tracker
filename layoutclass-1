@@ -11,16 +11,17 @@ public class FolderList extends JFrame {
     private static final Color FOLDER_COLOR = new Color(255, 204, 204);
     private static final Color SEARCH_COLOR = new Color(204, 255, 204);
     private static final Color TASK_PANEL_COLOR = new Color(204, 204, 255);
+    private static final Color ADD_PROJECT_PANEL_COLOR = new Color(204, 255, 204);
 
     public FolderList() {
         setTitle("Custom Window");
-        setSize(800, 600);
+        setSize(1200, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(null);
 
         // Side Panel
         JPanel sidePanel = new JPanel();
-        sidePanel.setBounds(0, 0, (int) (1.5 * 96), getHeight()); // 1.5 inches wide
+        sidePanel.setBounds(0, 0, 144, getHeight()); // Fixed width of 144 pixels
         sidePanel.setBackground(GREEN);
         sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.Y_AXIS));
 
@@ -34,7 +35,7 @@ public class FolderList extends JFrame {
 
         // Timer Panel
         JPanel timerPanel = new JPanel();
-        timerPanel.setBounds((int) (1.5 * 96), 0, getWidth() - (int) (1.5 * 96), (int) (0.5 * 96)); // Height 0.5 inches
+        timerPanel.setBounds(144, 0, getWidth() - 144, 48); // Fixed height of 48 pixels
         timerPanel.setBackground(TIMER_COLOR);
         timerPanel.setLayout(new BorderLayout());
 
@@ -45,15 +46,21 @@ public class FolderList extends JFrame {
         timerPanel.add(usernameLabel, BorderLayout.EAST);
         add(timerPanel);
 
-        // Add Project Button
+        // Add Project Panel
+        JPanel addProjectPanel = new JPanel();
+        addProjectPanel.setBounds(144, 48, getWidth() - 144, 40); // Position below Timer Panel
+        addProjectPanel.setLayout(new BorderLayout());
+        addProjectPanel.setBackground(ADD_PROJECT_PANEL_COLOR);
+
         JButton addProjectButton = new JButton("Add Project");
         addProjectButton.setBackground(ADD_PROJECT_COLOR);
-        addProjectButton.setBounds(getWidth() - 150, (int) (0.5 * 96 + 10), 120, 30);
-        add(addProjectButton);
+        addProjectButton.setPreferredSize(new Dimension(120, 30));
+        addProjectPanel.add(addProjectButton, BorderLayout.EAST);
+        add(addProjectPanel);
 
         // Folder Panel
         JPanel folderPanel = new JPanel();
-        folderPanel.setBounds((int) (1.5 * 96), (int) (0.5 * 96 + 40), getWidth() - (int) (1.5 * 96), (int) (1.5 * 96) - 40); // Adjusted to avoid overlap
+        folderPanel.setBounds(144, 88, getWidth() - 144, 216); // Position below Add Project Panel, height 216 pixels
         folderPanel.setBackground(FOLDER_COLOR);
         folderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
 
@@ -65,7 +72,7 @@ public class FolderList extends JFrame {
         }
 
         JScrollPane folderScrollPane = new JScrollPane(folderPanel);
-        folderScrollPane.setBounds((int) (1.5 * 96), (int) (0.5 * 96 + 40), getWidth() - (int) (1.5 * 96), (int) (1.5 * 96) - 40); // Adjusted to avoid overlap
+        folderScrollPane.setBounds(144, 88, getWidth() - 144, 216); // Position below Add Project Panel, height 216 pixels
         folderScrollPane.setBorder(BorderFactory.createLineBorder(Color.BLACK));
         folderScrollPane.getVerticalScrollBar().setUnitIncrement(16); // Adjust scrollbar sensitivity
 
@@ -73,7 +80,7 @@ public class FolderList extends JFrame {
 
         // Search Panel
         JPanel searchPanel = new JPanel();
-        searchPanel.setBounds((int) (1.5 * 96), (int) (0.5 * 96 + 1.5 * 96 + 40), getWidth() - (int) (1.5 * 96), (int) (0.3 * 96));
+        searchPanel.setBounds(144, 304, getWidth() - 144, 29); // Position below Folder Panel, height 29 pixels
         searchPanel.setBackground(SEARCH_COLOR);
         searchPanel.setLayout(new BorderLayout());
 
@@ -87,7 +94,7 @@ public class FolderList extends JFrame {
 
         // Task Panel
         JPanel taskPanel = new JPanel();
-        taskPanel.setBounds((int) (1.5 * 96), (int) (0.5 * 96 + 1.5 * 96 + 0.3 * 96 + 40), getWidth() - (int) (1.5 * 96), getHeight() - (int) (0.5 * 96 + 1.5 * 96 + 0.3 * 96 + 40));
+        taskPanel.setBounds(144, 333, getWidth() - 144, getHeight() - 333); // Position below Search Panel
         taskPanel.setBackground(TASK_PANEL_COLOR);
         taskPanel.setLayout(new BorderLayout());
 
