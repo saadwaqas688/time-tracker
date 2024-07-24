@@ -17,11 +17,11 @@ public class FolderList extends JFrame {
         setTitle("Custom Window");
         setSize(1200, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(null);
+        setLayout(new BorderLayout());
 
         // Side Panel
         JPanel sidePanel = new JPanel();
-        sidePanel.setBounds(0, 0, 144, getHeight()); // Fixed width of 144 pixels
+        sidePanel.setPreferredSize(new Dimension(144, getHeight())); // Fixed width of 144 pixels
         sidePanel.setBackground(GREEN);
         sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.Y_AXIS));
 
@@ -31,11 +31,15 @@ public class FolderList extends JFrame {
         sidePanel.add(button1);
         sidePanel.add(button2);
         sidePanel.add(button3);
-        add(sidePanel);
+        add(sidePanel, BorderLayout.WEST);
+
+        // Main Panel (contains all other panels)
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BorderLayout());
 
         // Timer Panel
         JPanel timerPanel = new JPanel();
-        timerPanel.setBounds(144, 0, getWidth() - 144, 48); // Fixed height of 48 pixels
+        timerPanel.setPreferredSize(new Dimension(getWidth(), 48)); // Fixed height of 48 pixels
         timerPanel.setBackground(TIMER_COLOR);
         timerPanel.setLayout(new BorderLayout());
 
@@ -44,11 +48,15 @@ public class FolderList extends JFrame {
 
         timerPanel.add(timerLabel, BorderLayout.WEST);
         timerPanel.add(usernameLabel, BorderLayout.EAST);
-        add(timerPanel);
+        mainPanel.add(timerPanel, BorderLayout.NORTH);
+
+        // Center Panel (contains Add Project Panel, Folder Panel, Search Panel, Task Panel)
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BorderLayout());
 
         // Add Project Panel
         JPanel addProjectPanel = new JPanel();
-        addProjectPanel.setBounds(144, 48, getWidth() - 144, 40); // Position below Timer Panel
+        addProjectPanel.setPreferredSize(new Dimension(getWidth(), 40));
         addProjectPanel.setLayout(new BorderLayout());
         addProjectPanel.setBackground(ADD_PROJECT_PANEL_COLOR);
 
@@ -56,11 +64,14 @@ public class FolderList extends JFrame {
         addProjectButton.setBackground(ADD_PROJECT_COLOR);
         addProjectButton.setPreferredSize(new Dimension(120, 30));
         addProjectPanel.add(addProjectButton, BorderLayout.EAST);
-        add(addProjectPanel);
+        centerPanel.add(addProjectPanel, BorderLayout.NORTH);
+
+        // Folder and Search Panel Container
+        JPanel folderSearchPanel = new JPanel();
+        folderSearchPanel.setLayout(new BorderLayout());
 
         // Folder Panel
         JPanel folderPanel = new JPanel();
-        folderPanel.setBounds(144, 88, getWidth() - 144, 216); // Position below Add Project Panel, height 216 pixels
         folderPanel.setBackground(FOLDER_COLOR);
         folderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
 
@@ -72,15 +83,13 @@ public class FolderList extends JFrame {
         }
 
         JScrollPane folderScrollPane = new JScrollPane(folderPanel);
-        folderScrollPane.setBounds(144, 88, getWidth() - 144, 216); // Position below Add Project Panel, height 216 pixels
         folderScrollPane.setBorder(BorderFactory.createLineBorder(Color.BLACK));
         folderScrollPane.getVerticalScrollBar().setUnitIncrement(16); // Adjust scrollbar sensitivity
-
-        add(folderScrollPane);
+        folderSearchPanel.add(folderScrollPane, BorderLayout.NORTH);
 
         // Search Panel
         JPanel searchPanel = new JPanel();
-        searchPanel.setBounds(144, 304, getWidth() - 144, 29); // Position below Folder Panel, height 29 pixels
+        searchPanel.setPreferredSize(new Dimension(getWidth(), 29)); // Fixed height of 29 pixels
         searchPanel.setBackground(SEARCH_COLOR);
         searchPanel.setLayout(new BorderLayout());
 
@@ -90,11 +99,12 @@ public class FolderList extends JFrame {
 
         searchPanel.add(searchField, BorderLayout.WEST);
         searchPanel.add(addTaskButton, BorderLayout.EAST);
-        add(searchPanel);
+        folderSearchPanel.add(searchPanel, BorderLayout.SOUTH);
+
+        centerPanel.add(folderSearchPanel, BorderLayout.CENTER);
 
         // Task Panel
         JPanel taskPanel = new JPanel();
-        taskPanel.setBounds(144, 333, getWidth() - 144, getHeight() - 333); // Position below Search Panel
         taskPanel.setBackground(TASK_PANEL_COLOR);
         taskPanel.setLayout(new BorderLayout());
 
@@ -108,7 +118,10 @@ public class FolderList extends JFrame {
         JScrollPane tableScrollPane = new JScrollPane(table);
 
         taskPanel.add(tableScrollPane, BorderLayout.CENTER);
-        add(taskPanel);
+        centerPanel.add(taskPanel, BorderLayout.SOUTH);
+
+        mainPanel.add(centerPanel, BorderLayout.CENTER);
+        add(mainPanel, BorderLayout.CENTER);
 
         setVisible(true);
     }
