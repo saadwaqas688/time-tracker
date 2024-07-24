@@ -1,0 +1,9 @@
+secondary-color: rgba(0, 36, 51);
+primary-color: rgb(3, 50, 70);
+primary-text-color: rgb(255, 255, 255);
+
+success-color: rgba(17, 235, 130, 1); /* Green tone */
+info-color: rgba(122, 142, 248, 1);   /* Blue tone */
+warning-color: rgba(244, 162, 97, 1); /* Orange tone */
+error-color: rgba(251, 93, 93, 1);    /* Red tone */
+accent-color: rgba(231, 111, 81, 1);  /* Accent color */
