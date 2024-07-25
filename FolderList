@@ -1,4 +1,4 @@
-package example;
+package org.example;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -34,6 +34,7 @@ public class FolderList extends JFrame {
     private JLabel currentTaskDetailsLabel;
     private JButton startButton;
     private JButton stopButton;
+    private Timer idleTimer;
 
 
     private JLabel globalTimerLabel;
@@ -44,6 +45,7 @@ public class FolderList extends JFrame {
     private Timer globalTimer;
     private long globalStartTime;
     private boolean isGlobalTimerRunning;
+    private GlobalEventListener listener;
 
     private static FolderList instance;
     // Static method to get the singleton instance
@@ -219,7 +221,7 @@ public class FolderList extends JFrame {
     private void startGlobalEventListener() {
         Thread eventListenerThread = new Thread(() -> {
             try {
-                GlobalEventListener listener = new GlobalEventListener();
+                 listener = new GlobalEventListener();
                 listener.openLogFilePublic();
                 listener.startPeriodicLoggingPublic();
 
@@ -479,6 +481,7 @@ public class FolderList extends JFrame {
         if (isGlobalTimerRunning) {
             return;
         }
+        startIdleTracking();
         globalStartTime = System.currentTimeMillis() - elapsedTimeBeforeStop;;
         globalTimer = new Timer();
         globalTimer.scheduleAtFixedRate(new TimerTask() {
@@ -490,6 +493,68 @@ public class FolderList extends JFrame {
         isGlobalTimerRunning = true;
         startButtonGlobalTimer.setEnabled(false);
         stopButtonGlobalTimer.setEnabled(true);
+    }
+
+
+
+
+    private void startIdleTracking() {
+        if (idleTimer != null) {
+            idleTimer.cancel();
+        }
+        idleTimer = new Timer();
+        idleTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                long idleTime = listener.getIdleTime();
+                if (idleTime >= 15000) {  // 15 seconds idle time
+                    idleTimer.cancel();  // Stop further checks during the countdown
+                    SwingUtilities.invokeLater(() -> showIdleAlert());
+                }
+            }
+        }, 0, 5000); // Every 5 seconds
+    }
+
+    private void showIdleAlert() {
+        JDialog idleDialog = new JDialog(this, "Idle Alert", true);
+        idleDialog.setLayout(new BorderLayout());
+        idleDialog.setSize(300, 150);
+        idleDialog.setLocationRelativeTo(this);
+
+        JLabel messageLabel = new JLabel("You have been idle for a while. Timer will stop in 60 seconds.");
+        messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        idleDialog.add(messageLabel, BorderLayout.CENTER);
+
+        JLabel countdownLabel = new JLabel("Time remaining: 60 seconds");
+        countdownLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        idleDialog.add(countdownLabel, BorderLayout.NORTH);
+
+        JButton cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener(e -> {
+            idleDialog.dispose();
+            startIdleTracking(); // Restart idle tracking
+        });
+        idleDialog.add(cancelButton, BorderLayout.SOUTH);
+
+        Timer countdownTimer = new Timer();
+        countdownTimer.scheduleAtFixedRate(new TimerTask() {
+            int remainingTime = 60;  // 60 seconds countdown
+
+            @Override
+            public void run() {
+                SwingUtilities.invokeLater(() -> {
+                    if (remainingTime > 0) {
+                        countdownLabel.setText("Time remaining: " + (--remainingTime) + " seconds");
+                    } else {
+                        countdownTimer.cancel();
+                        idleDialog.dispose();
+                        stopGlobalTimer();  // Stop the global timer
+                    }
+                });
+            }
+        }, 1000, 1000); // Update every second
+
+        idleDialog.setVisible(true);
     }
 
     private void stopGlobalTimer() {
