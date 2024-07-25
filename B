@@ -1,0 +1,47 @@
+package org.example;
+
+import javax.swing.*;
+import java.awt.*;
+
+
+public class B {
+
+    private JPanel panel;
+    private JButton startButton;
+    private JButton stopButton;
+    private JLabel timeLabel;
+    private C timerComponent;
+
+    public B(C timerComponent) {
+        this.timerComponent = timerComponent;
+        initializeComponents();
+    }
+
+    private void initializeComponents() {
+        panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+
+        timeLabel = new JLabel("Time: 0 seconds");
+        panel.add(timeLabel, BorderLayout.NORTH);
+
+        startButton = new JButton("Start");
+        stopButton = new JButton("Stop");
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(startButton);
+        buttonPanel.add(stopButton);
+        panel.add(buttonPanel, BorderLayout.SOUTH);
+
+        startButton.addActionListener(e -> timerComponent.startTimer());
+        stopButton.addActionListener(e -> timerComponent.stopTimer());
+
+        timerComponent.addTimeUpdateListener(this::updateTimeLabel);
+    }
+
+    private void updateTimeLabel(int elapsedTime) {
+        SwingUtilities.invokeLater(() -> timeLabel.setText("Time: " + elapsedTime + " seconds"));
+    }
+
+    public JPanel getPanel() {
+        return panel;
+    }
+}

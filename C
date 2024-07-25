@@ -1,0 +1,59 @@
+package org.example;
+
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+
+public class C {
+
+    private static final int INTERVAL = 1000; // 1 second
+    private static final long IDLE_THRESHOLD = 5000; // 5 seconds
+
+    private Timer timer;
+    private int elapsedTime = 0;
+    private TimeUpdateListener listener;
+    private GlobalEventListener globalEventListener;
+
+    public C(GlobalEventListener globalEventListener) {
+        this.globalEventListener = globalEventListener;
+        timer = new Timer(INTERVAL, new TimerAction());
+    }
+
+    public void startTimer() {
+        if (!timer.isRunning()) {
+            timer.start();
+        }
+    }
+
+    public void stopTimer() {
+        if (timer.isRunning()) {
+            timer.stop();
+        }
+    }
+
+    public void addTimeUpdateListener(TimeUpdateListener listener) {
+        this.listener = listener;
+    }
+
+    private class TimerAction implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            elapsedTime++;
+            if (listener != null) {
+                listener.onTimeUpdate(elapsedTime);
+            }
+            checkForIdleTime();
+        }
+
+        private void checkForIdleTime() {
+            if (globalEventListener.getIdleTime() >= IDLE_THRESHOLD) {
+                stopTimer();
+            }
+        }
+    }
+
+    public interface TimeUpdateListener {
+        void onTimeUpdate(int elapsedTime);
+    }
+}

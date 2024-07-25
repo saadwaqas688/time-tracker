@@ -1,0 +1,38 @@
+package org.example;
+
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+public class D {
+    private static final int INTERVAL = 1000; // 1 second
+    private Timer timer;
+    private int elapsedTime = 0;
+
+    public D() {
+        timer = new Timer(INTERVAL, new TimerAction());
+    }
+
+    public void startTimer() {
+        if (!timer.isRunning()) {
+            timer.start();
+        }
+    }
+
+    public void stopTimer() {
+        if (timer.isRunning()) {
+            timer.stop();
+        }
+    }
+
+    public int getTotalTime() {
+        return elapsedTime;
+    }
+
+    private class TimerAction implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            elapsedTime++;
+        }
+    }
+}

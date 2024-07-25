@@ -1,5 +1,11 @@
-package example;
+package org.example;
 
+import org.jnativehook.GlobalScreen;
+import org.jnativehook.NativeHookException;
+import org.jnativehook.keyboard.NativeKeyEvent;
+import org.jnativehook.keyboard.NativeKeyListener;
+import org.jnativehook.mouse.NativeMouseEvent;
+import org.jnativehook.mouse.NativeMouseMotionListener;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -8,36 +14,25 @@ import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.jnativehook.GlobalScreen;
-import org.jnativehook.NativeHookException;
-import org.jnativehook.keyboard.NativeKeyEvent;
-import org.jnativehook.keyboard.NativeKeyListener;
-import org.jnativehook.mouse.NativeMouseEvent;
-import org.jnativehook.mouse.NativeMouseMotionListener;
-
-import javax.swing.*;
-
 public class GlobalEventListener implements NativeKeyListener, NativeMouseMotionListener{
 
     private static final String LOG_FILE = "user_activity.log";
     private BufferedWriter writer;
     private int mouseMoveCount = 0;
     private int keyPressCount = 0;
-    private static final long IDLE_THRESHOLD = 5000; // 30 seconds in milliseconds
-    private GlobalTimer globalTimer;
+    private static final long IDLE_THRESHOLD = 5000; // 5 seconds in milliseconds
     private long lastActivityTime = System.currentTimeMillis();
     private boolean popupShown = false; // Flag to track if popup has been shown
 
 
-    private void resetIdleState() {
-        lastActivityTime = System.currentTimeMillis();
-        mouseMoveCount = 0;
-        keyPressCount = 0;
-    }
+//    private void resetIdleState() {
+//        lastActivityTime = System.currentTimeMillis();
+//        mouseMoveCount = 0;
+//        keyPressCount = 0;
+//    }
 
     public GlobalEventListener() {
-        globalTimer = new GlobalTimer();
-        globalTimer.start();
+
         startIdleTracking();
     }
 
@@ -98,7 +93,7 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
         startPeriodicLogging();
     }
 
-    private void startPeriodicLogging() {
+    public void startPeriodicLogging() {
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -114,9 +109,15 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
         }, 0, 15000); // 15000 ms = 15 seconds
     }
 
-    public void startGlobalTimer() {
-        globalTimer.start();
+
+    private synchronized void resetIdleState() {
+        lastActivityTime = System.currentTimeMillis();
+        mouseMoveCount = 0;
+        keyPressCount = 0;
+        popupShown = false; // Reset popup shown status
     }
+
+
     public void startIdleTracking() {
         Timer idleTimer = new Timer();
         idleTimer.scheduleAtFixedRate(new TimerTask() {
@@ -125,7 +126,7 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
                 long currentTime = System.currentTimeMillis();
                 long idleTime = currentTime - lastActivityTime;
                 if (idleTime >= IDLE_THRESHOLD && !popupShown) {
-                    showIdleAlert();
+//                    showIdleAlert();
                 }
             }
         }, 0, 1000); // Check every second
@@ -133,47 +134,31 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
 
     @Override
     public void nativeKeyPressed(NativeKeyEvent e) {
-        keyPressCount++;
-        lastActivityTime = System.currentTimeMillis();
-        popupShown = false; // Reset popupShown when activity is detected
+        synchronized (this) {
+            keyPressCount++;
+            lastActivityTime = System.currentTimeMillis();
+            popupShown = false;
+        }
 
     }
 
     @Override
     public void nativeMouseMoved(NativeMouseEvent e) {
-        mouseMoveCount++;
-        lastActivityTime = System.currentTimeMillis();
-        popupShown = false; // Reset popupShown when activity is detected
+        synchronized (this) {
+
+            mouseMoveCount++;
+            lastActivityTime = System.currentTimeMillis();
+            popupShown = false;
+        }
 
     }
-
-    private void showIdleAlert() {
-        popupShown = true; // Set flag to indicate that popup is shown
-        new Thread(() -> {
-            int countdown = 60; // Countdown from 60 seconds
-            while (countdown > 0) {
-                int result = JOptionPane.showConfirmDialog(null, "You've been idle for 30 seconds! Countdown: " + countdown, "Idle Alert", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
-                if (result == JOptionPane.CANCEL_OPTION) {
-                    resetIdleState();
-                    return;
-                }
-                countdown--;
-                try {
-                    Thread.sleep(1000); // 1 second delay
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            globalTimer.stop();
-        }).start();
-    }
-
 
 
     @Override
     public void nativeKeyReleased(NativeKeyEvent e) {
         // Optional handling for key release events
     }
+
 
     @Override
     public void nativeKeyTyped(NativeKeyEvent e) {
@@ -184,4 +169,16 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
     public void nativeMouseDragged(NativeMouseEvent e) {
         // Optional handling for mouse drag events
     }
+
+    // Method to calculate idle time
+    public long getIdleTime() {
+        return System.currentTimeMillis() - lastActivityTime;
+    }
+
+    // Method to get the total counts of mouse movements and key presses
+    public synchronized String getCounts() {
+        return "Mouse Moves: " + mouseMoveCount + ", Key Presses: " + keyPressCount;
+    }
+
+
 }
