@@ -1,6 +1,8 @@
 package org.example;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellEditor;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -281,6 +283,12 @@ public class FolderList extends JFrame {
         // globalTimerLabel = new JLabel("Global Timer: 00:00:00");
         // globalTimerLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
+
+        currentTaskLabel = new JLabel("Current Task:");
+        currentTaskLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        currentTaskDetailsLabel = new JLabel("No task running");
+        currentTaskDetailsLabel.setHorizontalAlignment(SwingConstants.LEFT);
+
         startButton = new JButton("Start");
         stopButton = new JButton("Stop");
 
@@ -328,7 +336,8 @@ public class FolderList extends JFrame {
         //     public void actionPerformed(ActionEvent e) {
         //         stopGlobalTimer();
         //     }
-        // });
+        // });\]
+
 
         JPanel buttonPanelGlobalTimer = new JPanel(new FlowLayout(FlowLayout.LEFT));
         buttonPanelGlobalTimer.add(startButtonGlobalTimer);
@@ -486,7 +495,6 @@ public class FolderList extends JFrame {
     }
 
     private void showTasks(String projectId) {
-        // Find the selected project
         Project selectedProject = projects.stream().filter(p -> p.getId().equals(projectId)).findFirst().orElse(null);
         if (selectedProject == null || selectedProject.getTasks().isEmpty()) {
             JOptionPane.showMessageDialog(null, "No tasks available.", "Information", JOptionPane.INFORMATION_MESSAGE);
@@ -494,30 +502,43 @@ public class FolderList extends JFrame {
         }
 
         List<Task> tasks = selectedProject.getTasks();
-        // Convert task data to a 2D array for the JTable
+        String[] columnNames = {"Task", "Description", "Create Date", "Status", "Total Time"};
         Object[][] taskData = new Object[tasks.size()][5];
+
         for (int i = 0; i < tasks.size(); i++) {
             Task task = tasks.get(i);
-            taskData[i][0] = task.getName();
+            taskData[i][0] = task;  // Store the Task object itself
             taskData[i][1] = task.getDescription();
             taskData[i][2] = task.getCreateDate().toString();
             taskData[i][3] = task.getStatus();
             taskData[i][4] = task.getTotalTime();
         }
 
-        // Create the table model
-        String[] columnNames = {"Name", "Description", "Create Date", "Status", "Total Time"};
         DefaultTableModel tableModel = new DefaultTableModel(taskData, columnNames) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 0; // Make task name editable
+                return column == 0 || column == 3; // Editable for Task and Status columns
+            }
+
+            @Override
+            public Class<?> getColumnClass(int column) {
+                if (column == 0) return Task.class; // Custom class for task column
+                return String.class;
             }
         };
 
         JTable table = new JTable(tableModel);
+
+        // Custom renderer and editor for the Task column
+        table.getColumnModel().getColumn(0).setCellRenderer(new TaskCellRenderer());
+        table.getColumnModel().getColumn(0).setCellEditor(new TaskCellEditor());
+
+        // ComboBox for Status column
+        JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"To Do", "In Progress", "Completed", "Review"});
+        table.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(statusComboBox));
+
         JScrollPane tableScrollPane = new JScrollPane(table);
 
-        // Update the task panel on the EDT
         SwingUtilities.invokeLater(() -> {
             taskPanelR.removeAll();
             taskPanelR.add(tableScrollPane, BorderLayout.CENTER);
@@ -525,6 +546,109 @@ public class FolderList extends JFrame {
             taskPanelR.repaint();
         });
     }
+
+    // Custom cell renderer for Task column
+    private class TaskCellRenderer extends JPanel implements TableCellRenderer {
+        private JLabel taskLabel;
+        private JButton startButton;
+        private JButton stopButton;
+
+        public TaskCellRenderer() {
+            setLayout(new FlowLayout(FlowLayout.LEFT));
+            taskLabel = new JLabel();
+            startButton = new JButton("Start");
+            stopButton = new JButton("Stop");
+
+            stopButton.setEnabled(false);
+
+            add(taskLabel);
+            add(startButton);
+            add(stopButton);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            Task task = (Task) value;
+            taskLabel.setText(task.getName());
+            startButton.setEnabled(!task.isRunning());
+            stopButton.setEnabled(task.isRunning());
+
+            startButton.addActionListener(e -> startTimer(task));
+            stopButton.addActionListener(e -> stopTimer());
+
+            return this;
+        }
+    }
+
+    // Custom cell editor for Task column
+    private class TaskCellEditor extends AbstractCellEditor implements TableCellEditor {
+        private TaskCellRenderer taskRenderer;
+
+        public TaskCellEditor() {
+            taskRenderer = new TaskCellRenderer();
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
+            taskRenderer.getTableCellRendererComponent(table, value, isSelected, true, row, column);
+            return taskRenderer;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            return null; // Not used in this context
+        }
+    }
+
+
+
+//     private void showTasks(String projectId) {
+//     // Find the selected project
+//     Project selectedProject = projects.stream().filter(p -> p.getId().equals(projectId)).findFirst().orElse(null);
+//     if (selectedProject == null || selectedProject.getTasks().isEmpty()) {
+//         JOptionPane.showMessageDialog(null, "No tasks available.", "Information", JOptionPane.INFORMATION_MESSAGE);
+//         return;
+//     }
+
+//     List<Task> tasks = selectedProject.getTasks();
+//     // Convert task data to a 2D array for the JTable
+//     Object[][] taskData = new Object[tasks.size()][5];
+//     for (int i = 0; i < tasks.size(); i++) {
+//         Task task = tasks.get(i);
+//         taskData[i][0] = task.getName();
+//         taskData[i][1] = task.getDescription();
+//         taskData[i][2] = task.getCreateDate().toString();
+//         taskData[i][3] = task.getStatus();
+//         taskData[i][4] = task.getTotalTime();
+//     }
+
+
+//     // Create the table model
+//     String[] columnNames = {"Name", "Description", "Create Date", "Status", "Total Time"};
+//     DefaultTableModel tableModel = new DefaultTableModel(taskData, columnNames) {
+//         @Override
+//         public boolean isCellEditable(int row, int column) {
+//             return column == 0 || column == 3; // Make task name and status editable
+//         }
+//     };
+
+//     JTable table = new JTable(tableModel);
+
+//     // Add a combo box to the Status column
+//     JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"To Do", "In Progress", "Completed", "Review"});
+//     table.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(statusComboBox));
+
+//     JScrollPane tableScrollPane = new JScrollPane(table);
+
+//     // Update the task panel on the EDT
+//     SwingUtilities.invokeLater(() -> {
+//         taskPanelR.removeAll();
+//         taskPanelR.add(tableScrollPane, BorderLayout.CENTER);
+//         taskPanelR.revalidate();
+//         taskPanelR.repaint();
+//     });
+// }
+
 
 
 
