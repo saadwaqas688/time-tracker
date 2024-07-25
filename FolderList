@@ -507,6 +507,8 @@ public class FolderList extends JFrame {
             @Override
             public void run() {
                 long idleTime = listener.getIdleTime();
+                System.out.println("Idle Time: " + idleTime / 1000 + " seconds");
+
                 if (idleTime >= 15000) {  // 15 seconds idle time
                     idleTimer.cancel();  // Stop further checks during the countdown
                     SwingUtilities.invokeLater(() -> showIdleAlert());
@@ -566,6 +568,10 @@ public class FolderList extends JFrame {
         isGlobalTimerRunning = false;
         startButtonGlobalTimer.setEnabled(true);
         stopButtonGlobalTimer.setEnabled(false);
+
+        if (currentTask != null) {
+            stopTimer();
+        }
     }
 
     private void updateGlobalTimer() {
