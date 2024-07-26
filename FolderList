@@ -43,6 +43,8 @@ public class FolderList extends JFrame {
     private static final Color TASK_PANEL_COLOR = new Color(204, 204, 255);
     private static final Color ADD_PROJECT_PANEL_COLOR = new Color(204, 255, 204);
     private static final Color MAIN_WINDOW_COLOR = new Color(0, 36, 51); // Red color for the main window
+    private int currentTaskRowIndex = -1; // Default to -1 (no task selected)
+    private JTable taskTable;
 
     private static final int MARGIN_SIZE = 5;
     //
@@ -214,62 +216,6 @@ public class FolderList extends JFrame {
 
 
 
-
-
-        //              globalTimerLabel = new JLabel("Global Timer: 00:00:00");
-        // globalTimerLabel.setHorizontalAlignment(SwingConstants.LEFT);
-
-
-        // JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        // buttonPanel.add(startButton);
-        // buttonPanel.add(stopButton);
-
-
-        // startButtonGlobalTimer = new JButton("Start");
-        // stopButtonGlobalTimer = new JButton("Stop");
-
-        // stopButtonGlobalTimer.setEnabled(false);
-
-        // startButtonGlobalTimer.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         startGlobalTimer();
-        //     }
-        // });
-
-        // stopButtonGlobalTimer.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         stopGlobalTimer();
-        //     }
-        // });
-
-        // JPanel buttonPanelGlobalTimer = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        // buttonPanelGlobalTimer.add(startButtonGlobalTimer);
-        // buttonPanelGlobalTimer.add(stopButtonGlobalTimer);
-        //
-        //
-
-
-
-
-
-        // folderPanel = new JPanel();
-        // folderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
-
-        // folderScrollPane = new JScrollPane(folderPanel, JScrollPane.VERTICAL_SCROLLBAR_NEVER, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        // folderScrollPane.setBounds(20, 100, 740, 100);
-        // folderScrollPane.setBorder(null);
-        // add(folderScrollPane);
-
-        // taskPanel = new JPanel();
-        // taskPanel.setLayout(new GridBagLayout());
-        // taskPanel.setBackground(LIGHT_BLUE);
-
-        // taskScrollPane = new JScrollPane(taskPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        // taskScrollPane.setBounds(20, 250, 740, 110);
-        // add(taskScrollPane);
-
         // Panel to show current task information
         currentTaskPanel = new JPanel();
         currentTaskPanel.setLayout(new GridLayout(3, 1));
@@ -280,9 +226,6 @@ public class FolderList extends JFrame {
         currentTaskLabel.setHorizontalAlignment(SwingConstants.LEFT);
         currentTaskDetailsLabel = new JLabel("No task running");
         currentTaskDetailsLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        // globalTimerLabel = new JLabel("Global Timer: 00:00:00");
-        // globalTimerLabel.setHorizontalAlignment(SwingConstants.LEFT);
-
 
         currentTaskLabel = new JLabel("Current Task:");
         currentTaskLabel.setHorizontalAlignment(SwingConstants.LEFT);
@@ -310,9 +253,6 @@ public class FolderList extends JFrame {
             }
         });
 
-        //       globalTimerLabel = new JLabel("Global Timer: 00:00:00");
-        // globalTimerLabel.setHorizontalAlignment(SwingConstants.LEFT);
-
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         buttonPanel.add(startButton);
@@ -321,22 +261,6 @@ public class FolderList extends JFrame {
 
         startButtonGlobalTimer = new JButton("Start");
         stopButtonGlobalTimer = new JButton("Stop");
-
-        // stopButtonGlobalTimer.setEnabled(false);
-
-        // startButtonGlobalTimer.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         startGlobalTimer();
-        //     }
-        // });
-
-        // stopButtonGlobalTimer.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         stopGlobalTimer();
-        //     }
-        // });\]
 
 
         JPanel buttonPanelGlobalTimer = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -527,17 +451,27 @@ public class FolderList extends JFrame {
             }
         };
 
-        JTable table = new JTable(tableModel);
+        taskTable = new JTable(tableModel);
 
         // Custom renderer and editor for the Task column
-        table.getColumnModel().getColumn(0).setCellRenderer(new TaskCellRenderer());
-        table.getColumnModel().getColumn(0).setCellEditor(new TaskCellEditor());
+        taskTable.getColumnModel().getColumn(0).setCellRenderer(new TaskCellRenderer());
+        taskTable.getColumnModel().getColumn(0).setCellEditor(new TaskCellEditor());
+        taskTable.getColumnModel().getColumn(0).setPreferredWidth(300); // Adjust width for Task column if needed
+        taskTable.setRowHeight(40); // Set row height to accommodate buttons and label
 
         // ComboBox for Status column
         JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"To Do", "In Progress", "Completed", "Review"});
-        table.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(statusComboBox));
+        taskTable.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(statusComboBox));
 
-        JScrollPane tableScrollPane = new JScrollPane(table);
+
+        // Set the current task row index
+        if (currentTask != null) {
+            currentTaskRowIndex = tasks.indexOf(currentTask);
+        } else {
+            currentTaskRowIndex = -1; // No task selected
+        }
+
+        JScrollPane tableScrollPane = new JScrollPane(taskTable);
 
         SwingUtilities.invokeLater(() -> {
             taskPanelR.removeAll();
@@ -601,145 +535,6 @@ public class FolderList extends JFrame {
     }
 
 
-
-//     private void showTasks(String projectId) {
-//     // Find the selected project
-//     Project selectedProject = projects.stream().filter(p -> p.getId().equals(projectId)).findFirst().orElse(null);
-//     if (selectedProject == null || selectedProject.getTasks().isEmpty()) {
-//         JOptionPane.showMessageDialog(null, "No tasks available.", "Information", JOptionPane.INFORMATION_MESSAGE);
-//         return;
-//     }
-
-//     List<Task> tasks = selectedProject.getTasks();
-//     // Convert task data to a 2D array for the JTable
-//     Object[][] taskData = new Object[tasks.size()][5];
-//     for (int i = 0; i < tasks.size(); i++) {
-//         Task task = tasks.get(i);
-//         taskData[i][0] = task.getName();
-//         taskData[i][1] = task.getDescription();
-//         taskData[i][2] = task.getCreateDate().toString();
-//         taskData[i][3] = task.getStatus();
-//         taskData[i][4] = task.getTotalTime();
-//     }
-
-
-//     // Create the table model
-//     String[] columnNames = {"Name", "Description", "Create Date", "Status", "Total Time"};
-//     DefaultTableModel tableModel = new DefaultTableModel(taskData, columnNames) {
-//         @Override
-//         public boolean isCellEditable(int row, int column) {
-//             return column == 0 || column == 3; // Make task name and status editable
-//         }
-//     };
-
-//     JTable table = new JTable(tableModel);
-
-//     // Add a combo box to the Status column
-//     JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"To Do", "In Progress", "Completed", "Review"});
-//     table.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(statusComboBox));
-
-//     JScrollPane tableScrollPane = new JScrollPane(table);
-
-//     // Update the task panel on the EDT
-//     SwingUtilities.invokeLater(() -> {
-//         taskPanelR.removeAll();
-//         taskPanelR.add(tableScrollPane, BorderLayout.CENTER);
-//         taskPanelR.revalidate();
-//         taskPanelR.repaint();
-//     });
-// }
-
-
-
-
-
-    // private void showTasks(String projectId) {
-    //     taskPanel.removeAll();
-    //     Project selectedProject = projects.stream().filter(p -> p.getId().equals(projectId)).findFirst().orElse(null);
-    //     if (selectedProject == null) {
-    //         JLabel noTasksLabel = new JLabel("No tasks available.");
-    //         noTasksLabel.setHorizontalAlignment(SwingConstants.CENTER);
-    //         GridBagConstraints gbc = new GridBagConstraints();
-    //         gbc.gridx = 0;
-    //         gbc.gridy = 0;
-    //         taskPanel.add(noTasksLabel, gbc);
-    //         taskPanel.revalidate();
-    //         taskPanel.repaint();
-    //         return;
-    //     }
-
-    //     List<Task> tasks = selectedProject.getTasks();
-    //     GridBagConstraints gbc = new GridBagConstraints();
-    //     gbc.fill = GridBagConstraints.HORIZONTAL;
-    //     gbc.insets = new Insets(5, 5, 5, 5);
-
-    //     int row = 0;
-    //     for (Task task : tasks) {
-    //         gbc.gridx = 0;
-    //         gbc.gridy = row++;
-    //         JLabel taskLabel = new JLabel(task.getName() + " - Time Spent: " + task.getTimeSpent());
-    //         taskLabel.setPreferredSize(new Dimension(500, 40));
-    //         taskLabel.setBackground(task == currentTask ? DARK_BLUE : LIGHT_BLUE);
-    //         taskLabel.setOpaque(true);
-    //         taskLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-
-    //         JButton startButton = new JButton("Start");
-    //         startButton.addActionListener(new ActionListener() {
-    //             @Override
-    //             public void actionPerformed(ActionEvent e) {
-    //                 startTimer(task);
-    //             }
-    //         });
-
-    //         JButton stopButton = new JButton("Stop");
-    //         stopButton.setEnabled(task == currentTask);
-    //         stopButton.addActionListener(new ActionListener() {
-    //             @Override
-    //             public void actionPerformed(ActionEvent e) {
-    //                 stopTimer();
-    //             }
-    //         });
-
-    //         JButton deleteButton = new JButton("Delete");
-    //         deleteButton.setEnabled(task != currentTask); // Disable delete for current task
-    //         deleteButton.addActionListener(new ActionListener() {
-    //             @Override
-    //             public void actionPerformed(ActionEvent e) {
-    //                 int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to delete this task?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
-    //                 if (result == JOptionPane.YES_OPTION) {
-    //                     selectedProject.getTasks().remove(task);
-    //                     // showTasks(selectedProject.getId());
-    //                 }
-    //             }
-    //         });
-
-    //         gbc.gridx = 1;
-    //         taskPanel.add(taskLabel, gbc);
-    //         gbc.gridx = 2;
-    //         taskPanel.add(startButton, gbc);
-    //         gbc.gridx = 3;
-    //         taskPanel.add(stopButton, gbc);
-    //         gbc.gridx = 4;
-    //         taskPanel.add(deleteButton, gbc);
-    //     }
-
-    //     // Add Add Task button
-    //     JButton addTaskButton = new JButton("Add Task");
-    //     addTaskButton.addActionListener(new ActionListener() {
-    //         @Override
-    //         public void actionPerformed(ActionEvent e) {
-    //             showAddTaskDialog(selectedProject);
-    //         }
-    //     });
-    //     gbc.gridx = 0;
-    //     gbc.gridy = row;
-    //     gbc.gridwidth = GridBagConstraints.REMAINDER;
-    //     gbc.anchor = GridBagConstraints.CENTER;
-    //     taskPanel.add(addTaskButton, gbc);
-
-    //     taskPanel.revalidate();
-    //     taskPanel.repaint();
-    // }
     private void showAddTaskDialog(Project project) {
         JDialog addDialog = new JDialog(this, "Add New Task", true);
         addDialog.setSize(300, 150);
@@ -785,6 +580,16 @@ public class FolderList extends JFrame {
         currentTask = task;
         currentProject = projects.stream().filter(p -> p.getId().equals(selectedProjectId)).findFirst().orElse(null);
         currentTaskDetailsLabel.setText(currentProject.getName() + " - " + currentTask.getName() + " - Time Spent: " + currentTask.getTimeSpent());
+        // Determine the row index of the current task
+        currentTaskRowIndex = -1;
+        for (int i = 0; i < taskTable.getRowCount(); i++) {
+            Task t = (Task) taskTable.getValueAt(i, 0); // Assuming the task is in the first column
+            if (t.equals(currentTask)) {
+                currentTaskRowIndex = i;
+                break;
+            }
+        }
+
         startButton.setEnabled(false);
         stopButton.setEnabled(true);
 
@@ -814,13 +619,33 @@ public class FolderList extends JFrame {
         showTasks(selectedProjectId);  // Refresh task list to remove highlighting
     }
 
+//    private void updateTimeSpent() {
+//        if (currentTask != null) {
+//            currentTask.incrementTimeSpent();
+//            currentTaskDetailsLabel.setText(currentProject.getName() + " - " + currentTask.getName() + " - Time Spent: " + currentTask.getTimeSpent());
+//            showTasks(selectedProjectId);  // Refresh task list to update time spent
+//        }
+//    }
+
+
     private void updateTimeSpent() {
         if (currentTask != null) {
             currentTask.incrementTimeSpent();
             currentTaskDetailsLabel.setText(currentProject.getName() + " - " + currentTask.getName() + " - Time Spent: " + currentTask.getTimeSpent());
-            showTasks(selectedProjectId);  // Refresh task list to update time spent
+
+            if (currentTaskRowIndex >= 0 && taskTable != null) {
+                // Update the time spent in the table cell for the current task
+                SwingUtilities.invokeLater(() -> {
+//                    taskTable.getModel().setValueAt(currentTask.getTotalTime(), currentTaskRowIndex, 4); // Update "Total Time" column
+                    DefaultTableModel model = (DefaultTableModel) taskTable.getModel();
+                    model.setValueAt(currentTask.getTotalTime(), currentTaskRowIndex, 4); // Update "Total Time" column
+                    taskTable.revalidate();  // Ensure table layout is updated
+                    taskTable.repaint();
+                });
+            }
         }
     }
+
 
 
     private void startGlobalTimer() {
