@@ -30,6 +30,13 @@ public class FolderList extends JFrame {
     private Timer timer;
     private Task currentTask;
     private Project currentProject;
+    private JLabel currentTaskLabel;
+    private JLabel currentTaskDetailsLabel;
+    private JButton startButton;
+    private JButton stopButton;
+
+    private long elapsedTimeBeforeStop = 0;
+
     private static final Color DARK_ORANGE = new Color(255, 140, 0);
     private static final Color LIGHT_BLUE = new Color(173, 216, 230);
     private static final Color DARK_BLUE = new Color(153, 204, 255);
@@ -49,17 +56,12 @@ public class FolderList extends JFrame {
     private static final int MARGIN_SIZE = 5;
     //
 
-    private JLabel currentTaskLabel;
-    private JLabel currentTaskDetailsLabel;
-    private JButton startButton;
-    private JButton stopButton;
     private Timer idleTimer;
 
 
     private JLabel globalTimerLabel;
     private JButton startButtonGlobalTimer;
     private JButton stopButtonGlobalTimer;
-    private long elapsedTimeBeforeStop = 0;
 
     private Timer globalTimer;
     private long globalStartTime;
@@ -155,14 +157,94 @@ public class FolderList extends JFrame {
         timerPanel.setBackground(TIMER_COLOR);
         timerPanel.setLayout(new BorderLayout());
         timerPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
-        globalTimerLabel = new JLabel("00:00:00", SwingConstants.LEFT);
-        JLabel usernameLabel = new JLabel("Username", SwingConstants.RIGHT);
 
-        timerPanel.add(globalTimerLabel, BorderLayout.WEST);
-        timerPanel.add(usernameLabel, BorderLayout.EAST);
+// Current Task Labels
+        currentTaskLabel = new JLabel("Project Name");
+        currentTaskLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        currentTaskDetailsLabel = new JLabel("No task selected");
+
+// Add spacing between project name and task details
+        currentTaskDetailsLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0)); // Adds top margin of 5 pixels
+
+// Panel for Task Information
+        JPanel taskInfoPanel = new JPanel();
+        taskInfoPanel.setLayout(new BoxLayout(taskInfoPanel, BoxLayout.Y_AXIS)); // Stack components vertically
+        taskInfoPanel.add(currentTaskLabel);
+        taskInfoPanel.add(currentTaskDetailsLabel);
+        taskInfoPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE)); // Add padding
+
+// Set background color and transparency
+        taskInfoPanel.setBackground(TIMER_COLOR);
+        taskInfoPanel.setOpaque(false);
+        currentTaskLabel.setOpaque(false);
+        currentTaskDetailsLabel.setOpaque(false);
+
+// Timer Label
+        globalTimerLabel = new JLabel("00:00:00", SwingConstants.LEFT);
+
+// Start and Stop Buttons for Global Timer
+        startButtonGlobalTimer = new JButton("Start");
+        stopButtonGlobalTimer = new JButton("Stop");
+
+// Button Action Listeners
+        startButtonGlobalTimer.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                startGlobalTimer();
+            }
+        });
+
+        stopButtonGlobalTimer.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                stopGlobalTimer();
+            }
+        });
+
+        stopButtonGlobalTimer.setVisible(false);
+
+// Panel for Timer and Buttons
+        JPanel timerAndButtonsPanel = new JPanel();
+        timerAndButtonsPanel.setLayout(new GridBagLayout());
+        timerAndButtonsPanel.setBackground(TIMER_COLOR); // Set background color
+        timerAndButtonsPanel.setOpaque(false); // Make transparent
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(0, 5, 0, 5); // Spacing between components
+        gbc.anchor = GridBagConstraints.WEST;
+
+// Add Timer Label
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        timerAndButtonsPanel.add(globalTimerLabel, gbc);
+
+// Add Start Button
+        gbc.gridx = 1;
+        timerAndButtonsPanel.add(startButtonGlobalTimer, gbc);
+
+// Add Stop Button
+        gbc.gridx = 2;
+        timerAndButtonsPanel.add(stopButtonGlobalTimer, gbc);
+
+// Username Label
+        JLabel usernameLabel = new JLabel("Username", SwingConstants.RIGHT);
+        usernameLabel.setBackground(TIMER_COLOR); // Set background color
+        usernameLabel.setOpaque(false); // Make transparent
+
+// Panel to align Timer and Buttons
+        JPanel rightPanel = new JPanel();
+        rightPanel.setLayout(new BorderLayout());
+        rightPanel.add(timerAndButtonsPanel, BorderLayout.CENTER);
+        rightPanel.add(usernameLabel, BorderLayout.EAST);
+        rightPanel.setBackground(TIMER_COLOR); // Set background color
+        rightPanel.setOpaque(false); // Make transparent
+
+// Add Components to Timer Panel
+        timerPanel.add(taskInfoPanel, BorderLayout.WEST);
+        timerPanel.add(rightPanel, BorderLayout.EAST);
+
+// Add Timer Panel to Center Panel
         centerPanel.add(timerPanel);
         centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE));
-
 
         // Add Project Panel
         JPanel addProjectPanel = new JPanel();
@@ -217,64 +299,21 @@ public class FolderList extends JFrame {
 
 
         // Panel to show current task information
-        currentTaskPanel = new JPanel();
-        currentTaskPanel.setLayout(new GridLayout(3, 1));
-        currentTaskPanel.setBounds(20, 10, 640, 80);
-        currentTaskPanel.setBackground(Color.LIGHT_GRAY);
-
-        currentTaskLabel = new JLabel("Current Task:");
-        currentTaskLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        currentTaskDetailsLabel = new JLabel("No task running");
-        currentTaskDetailsLabel.setHorizontalAlignment(SwingConstants.LEFT);
-
-        // currentTaskLabel = new JLabel("Current Task:");
-        // currentTaskLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        // currentTaskDetailsLabel = new JLabel("No task running");
-        // currentTaskDetailsLabel.setHorizontalAlignment(SwingConstants.LEFT);
-
-        // startButton = new JButton("Start");
-        // stopButton = new JButton("Stop");
-
-        // stopButton.setEnabled(false);
-
-        // startButton.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         if (currentTask != null) {
-        //             startTimer(currentTask);
-        //         }
-        //     }
-        // });
-
-        // stopButton.addActionListener(new ActionListener() {
-        //     @Override
-        //     public void actionPerformed(ActionEvent e) {
-        //         stopTimer();
-        //     }
-        // });
 
 
-        // JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        // buttonPanel.add(startButton);
-        // buttonPanel.add(stopButton);
+//
+//        startButtonGlobalTimer = new JButton("Start");
+//        stopButtonGlobalTimer = new JButton("Stop");
+//
+//
+//        JPanel buttonPanelGlobalTimer = new JPanel(new FlowLayout(FlowLayout.LEFT));
+//        buttonPanelGlobalTimer.add(startButtonGlobalTimer);
+//        buttonPanelGlobalTimer.add(stopButtonGlobalTimer);
 
 
-        startButtonGlobalTimer = new JButton("Start");
-        stopButtonGlobalTimer = new JButton("Stop");
 
 
-        JPanel buttonPanelGlobalTimer = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        buttonPanelGlobalTimer.add(startButtonGlobalTimer);
-        buttonPanelGlobalTimer.add(stopButtonGlobalTimer);
-
-        currentTaskPanel.add(currentTaskLabel);
-        currentTaskPanel.add(currentTaskDetailsLabel);
-        // currentTaskPanel.add(globalTimerLabel);
-        currentTaskPanel.add(buttonPanel);
-        currentTaskPanel.add(buttonPanelGlobalTimer);
-
-
-        add(currentTaskPanel);
+        // add(currentTaskPanel);
 
         startGlobalTimer();
 
@@ -662,8 +701,9 @@ public class FolderList extends JFrame {
             }
         }, 1000, 1000);
         isGlobalTimerRunning = true;
-        startButtonGlobalTimer.setEnabled(false);
-        stopButtonGlobalTimer.setEnabled(true);
+        startButtonGlobalTimer.setVisible(false);
+        stopButtonGlobalTimer.setVisible(true);
+
     }
 
 
@@ -680,7 +720,7 @@ public class FolderList extends JFrame {
                 long idleTime = listener.getIdleTime();
                 System.out.println("Idle Time: " + idleTime / 1000 + " seconds");
 
-                if (idleTime >= 15000) {  // 15 seconds idle time
+                if (idleTime >= 5000000) {  // 15 seconds idle time
                     idleTimer.cancel();  // Stop further checks during the countdown
                     SwingUtilities.invokeLater(() -> showIdleAlert());
                 }
@@ -740,6 +780,9 @@ public class FolderList extends JFrame {
         startButtonGlobalTimer.setEnabled(true);
         stopButtonGlobalTimer.setEnabled(false);
 
+        startButtonGlobalTimer.setVisible(true);
+        stopButtonGlobalTimer.setVisible(false);
+
         if (currentTask != null) {
             stopTimer();
         }
@@ -750,7 +793,7 @@ public class FolderList extends JFrame {
         int seconds = (int) (elapsedTime / 1000) % 60;
         int minutes = (int) (elapsedTime / 60000) % 60;
         int hours = (int) (elapsedTime / 3600000);
-        globalTimerLabel.setText(String.format("Global Timer: %02d:%02d:%02d", hours, minutes, seconds));
+        globalTimerLabel.setText(String.format("%02d:%02d:%02d", hours, minutes, seconds));
     }
 
 
