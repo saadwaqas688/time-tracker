@@ -227,36 +227,36 @@ public class FolderList extends JFrame {
         currentTaskDetailsLabel = new JLabel("No task running");
         currentTaskDetailsLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
-        currentTaskLabel = new JLabel("Current Task:");
-        currentTaskLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        currentTaskDetailsLabel = new JLabel("No task running");
-        currentTaskDetailsLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        // currentTaskLabel = new JLabel("Current Task:");
+        // currentTaskLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        // currentTaskDetailsLabel = new JLabel("No task running");
+        // currentTaskDetailsLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
-        startButton = new JButton("Start");
-        stopButton = new JButton("Stop");
+        // startButton = new JButton("Start");
+        // stopButton = new JButton("Stop");
 
-        stopButton.setEnabled(false);
+        // stopButton.setEnabled(false);
 
-        startButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (currentTask != null) {
-                    startTimer(currentTask);
-                }
-            }
-        });
+        // startButton.addActionListener(new ActionListener() {
+        //     @Override
+        //     public void actionPerformed(ActionEvent e) {
+        //         if (currentTask != null) {
+        //             startTimer(currentTask);
+        //         }
+        //     }
+        // });
 
-        stopButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                stopTimer();
-            }
-        });
+        // stopButton.addActionListener(new ActionListener() {
+        //     @Override
+        //     public void actionPerformed(ActionEvent e) {
+        //         stopTimer();
+        //     }
+        // });
 
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        buttonPanel.add(startButton);
-        buttonPanel.add(stopButton);
+        // JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        // buttonPanel.add(startButton);
+        // buttonPanel.add(stopButton);
 
 
         startButtonGlobalTimer = new JButton("Start");
@@ -590,8 +590,8 @@ public class FolderList extends JFrame {
             }
         }
 
-        startButton.setEnabled(false);
-        stopButton.setEnabled(true);
+        // startButton.setEnabled(false);
+        // stopButton.setEnabled(true);
 
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
@@ -614,8 +614,8 @@ public class FolderList extends JFrame {
         currentTask = null;
         currentProject = null;
         currentTaskDetailsLabel.setText("No task running");
-        startButton.setEnabled(true);
-        stopButton.setEnabled(false);
+        // startButton.setEnabled(true);
+        // stopButton.setEnabled(false);
         showTasks(selectedProjectId);  // Refresh task list to remove highlighting
     }
 
