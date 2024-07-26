@@ -97,33 +97,16 @@ public class FolderList extends JFrame {
         return instance;
     }
     FolderList() {
+        startGlobalEventListener();
         setTitle("Custom Window");
         setSize(1200, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//        setLayout(new BorderLayout(MARGIN_SIZE, MARGIN_SIZE));
-
-        startGlobalEventListener();
-
         JPanel mainPanel = new JPanel(new BorderLayout(MARGIN_SIZE, MARGIN_SIZE));
         mainPanel.setBackground(PRIMARY_COLOR);
+        
+        addSidePanel(mainPanel);
 
-
-
-
-
-        // Side Panel
-        JPanel sidePanel = new JPanel();
-        sidePanel.setPreferredSize(new Dimension(144, getHeight())); // Fixed width of 144 pixels
-        sidePanel.setBackground(SECONDARY_COLOR);
-        sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.Y_AXIS));
-
-        JButton button1 = new JButton("Button 1");
-        JButton button2 = new JButton("Button 2");
-        JButton button3 = new JButton("Button 3");
-        sidePanel.add(button1);
-        sidePanel.add(button2);
-        sidePanel.add(button3);
-        mainPanel.add(sidePanel, BorderLayout.WEST);
+        //centerPanel
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS)); // Use BoxLayout for vertical stacking
         centerPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
@@ -429,6 +412,43 @@ public class FolderList extends JFrame {
                 onWindowResize();
             }
         });
+    }
+
+
+    //side panel container
+    private void addSidePanel(JPanel mainPanel) {
+        // Side Panel with BorderLayout and margins
+        JPanel sidePanelContainer = new JPanel(new BorderLayout());
+        sidePanelContainer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 0)); // Top, Left, Bottom, Right
+        sidePanelContainer.setBackground(PRIMARY_COLOR); // Match background to main panel
+
+        JPanel sidePanel = new JPanel();
+        sidePanel.setPreferredSize(new Dimension(144, getHeight()));
+        sidePanel.setBackground(SECONDARY_COLOR);
+        sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.Y_AXIS));
+
+        JButton button1 = new JButton("Button 1");
+        JButton button2 = new JButton("Button 2");
+        JButton button3 = new JButton("Button 3");
+
+        // Center buttons horizontally and add spacing
+        button1.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button2.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button3.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        sidePanel.add(Box.createVerticalGlue()); // Pushes buttons to the top
+        sidePanel.add(button1);
+        sidePanel.add(Box.createVerticalStrut(10)); // Space between buttons
+        sidePanel.add(button2);
+        sidePanel.add(Box.createVerticalStrut(10)); // Space between buttons
+        sidePanel.add(button3);
+        sidePanel.add(Box.createVerticalGlue()); // Pushes buttons to the bottom
+
+        // Add sidePanel to sidePanelContainer
+        sidePanelContainer.add(sidePanel, BorderLayout.CENTER);
+
+        // Add sidePanelContainer to mainPanel
+        mainPanel.add(sidePanelContainer, BorderLayout.WEST);
     }
 
 
