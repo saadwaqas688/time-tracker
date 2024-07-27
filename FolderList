@@ -276,15 +276,14 @@ private JPanel createTimerPanel() {
     timerAndIconsPanel.add(stopIconGlobalTimer, gbc);
 
     // Username Label
-    JLabel usernameLabel = new JLabel("Username", SwingConstants.RIGHT);
-    usernameLabel.setForeground(PRIMARY_TEXT_COLOR); // Set text color
-    usernameLabel.setOpaque(false); // Make transparent
+    JLabel userAvatar = FolderListUtils.createUserAvatar("images/waqas-ahmed", "Username");
+
 
     // Panel to align Timer and Icons
     JPanel rightPanel = new JPanel();
     rightPanel.setLayout(new BorderLayout());
     rightPanel.add(timerAndIconsPanel, BorderLayout.CENTER);
-    rightPanel.add(usernameLabel, BorderLayout.EAST);
+    rightPanel.add(userAvatar, BorderLayout.EAST);
     rightPanel.setBackground(SECONDARY_COLOR); // Set background color
     rightPanel.setOpaque(false); // Make transparent
 
