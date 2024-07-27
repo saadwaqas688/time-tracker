@@ -186,113 +186,113 @@ public class FolderList extends JFrame {
 
 
 
-private JPanel createTimerPanel() {
-    JPanel timerPanel = new JPanel();
-    timerPanel.setPreferredSize(new Dimension(getWidth(), 48)); // Fixed height of 48 pixels
-    timerPanel.setBackground(SECONDARY_COLOR);
-    timerPanel.setLayout(new BorderLayout());
-    timerPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+    private JPanel createTimerPanel() {
+        JPanel timerPanel = new JPanel();
+        timerPanel.setPreferredSize(new Dimension(getWidth(), 48)); // Fixed height of 48 pixels
+        timerPanel.setBackground(SECONDARY_COLOR);
+        timerPanel.setLayout(new BorderLayout());
+        timerPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
 
-    // Current Task Labels
-    currentTaskLabel = new JLabel("Project Name");
-    currentTaskLabel.setHorizontalAlignment(SwingConstants.LEFT);
-    currentTaskDetailsLabel = new JLabel("No task selected");
-    currentTaskLabel.setForeground(PRIMARY_TEXT_COLOR); // Set text color
-    currentTaskDetailsLabel.setForeground(PRIMARY_TEXT_COLOR); // Set text color
+        // Current Task Labels
+        currentTaskLabel = new JLabel("Project Name");
+        currentTaskLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        currentTaskDetailsLabel = new JLabel("No task selected");
+        currentTaskLabel.setForeground(PRIMARY_TEXT_COLOR); // Set text color
+        currentTaskDetailsLabel.setForeground(PRIMARY_TEXT_COLOR); // Set text color
 
-    // Add spacing between project name and task details
-    currentTaskDetailsLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0)); // Adds top margin of 5 pixels
+        // Add spacing between project name and task details
+        currentTaskDetailsLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0)); // Adds top margin of 5 pixels
 
-    // Panel for Task Information
-    JPanel taskInfoPanel = new JPanel();
-    taskInfoPanel.setLayout(new BoxLayout(taskInfoPanel, BoxLayout.Y_AXIS)); // Stack components vertically
-    taskInfoPanel.setBackground(SECONDARY_COLOR); // Match timer panel color
-    taskInfoPanel.setOpaque(false); // Make transparent
-    taskInfoPanel.add(currentTaskLabel);
-    taskInfoPanel.add(currentTaskDetailsLabel);
-    taskInfoPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE)); // Add padding
+        // Panel for Task Information
+        JPanel taskInfoPanel = new JPanel();
+        taskInfoPanel.setLayout(new BoxLayout(taskInfoPanel, BoxLayout.Y_AXIS)); // Stack components vertically
+        taskInfoPanel.setBackground(SECONDARY_COLOR); // Match timer panel color
+        taskInfoPanel.setOpaque(false); // Make transparent
+        taskInfoPanel.add(currentTaskLabel);
+        taskInfoPanel.add(currentTaskDetailsLabel);
+        taskInfoPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE)); // Add padding
 
-    // Timer Label
-    globalTimerLabel = new JLabel("00:00:00", SwingConstants.LEFT);
-    globalTimerLabel.setForeground(PRIMARY_TEXT_COLOR); // Set text color
-    globalTimerLabel.setOpaque(false); // Make label transparent
+        // Timer Label
+        globalTimerLabel = new JLabel("00:00:00", SwingConstants.LEFT);
+        globalTimerLabel.setForeground(PRIMARY_TEXT_COLOR); // Set text color
+        globalTimerLabel.setOpaque(false); // Make label transparent
 
-    // Load icons for start and stop
-    ImageIcon startIcon = loadImageIcon("icons/small-start-icon.png", 30, 30); // Adjust path and size as needed
-    ImageIcon stopIcon = loadImageIcon("icons/stop-timer-main-icon.png", 30, 30);   // Adjust path and size as needed
+        // Load icons for start and stop
+        ImageIcon startIcon = loadImageIcon("icons/small-start-icon.png", 30, 30); // Adjust path and size as needed
+        ImageIcon stopIcon = loadImageIcon("icons/small-pause-con.png", 30, 30);   // Adjust path and size as needed
 
-    // Start Icon
-    startIconGlobalTimer = new JLabel();
-    if (startIcon != null) {
-        startIconGlobalTimer.setIcon(startIcon); // Set the icon
-    }
-    startIconGlobalTimer.setPreferredSize(new Dimension(30, 30)); // Set preferred size
-    startIconGlobalTimer.setOpaque(false); // Make label transparent
-    startIconGlobalTimer.addMouseListener(new MouseAdapter() {
-        @Override
-        public void mouseClicked(MouseEvent e) {
-            startGlobalTimer();
+        // Start Icon
+        startIconGlobalTimer = new JLabel();
+        if (startIcon != null) {
+            startIconGlobalTimer.setIcon(startIcon); // Set the icon
         }
-    });
+        startIconGlobalTimer.setPreferredSize(new Dimension(30, 30)); // Set preferred size
+        startIconGlobalTimer.setOpaque(false); // Make label transparent
+        startIconGlobalTimer.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                startGlobalTimer();
+            }
+        });
 
-    // Stop Icon
-    stopIconGlobalTimer = new JLabel();
-    if (stopIcon != null) {
-        stopIconGlobalTimer.setIcon(stopIcon); // Set the icon
-    }
-    stopIconGlobalTimer.setPreferredSize(new Dimension(30, 30)); // Set preferred size
-    stopIconGlobalTimer.setOpaque(false); // Make label transparent
-    stopIconGlobalTimer.addMouseListener(new MouseAdapter() {
-        @Override
-        public void mouseClicked(MouseEvent e) {
-            stopGlobalTimer();
+        // Stop Icon
+        stopIconGlobalTimer = new JLabel();
+        if (stopIcon != null) {
+            stopIconGlobalTimer.setIcon(stopIcon); // Set the icon
         }
-    });
+        stopIconGlobalTimer.setPreferredSize(new Dimension(30, 30)); // Set preferred size
+        stopIconGlobalTimer.setOpaque(false); // Make label transparent
+        stopIconGlobalTimer.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                stopGlobalTimer();
+            }
+        });
 
-    // Initially, make the stop icon invisible
-    stopIconGlobalTimer.setVisible(true);
-    stopIconGlobalTimer.setVisible(false);
+        // Initially, make the stop icon invisible
+        stopIconGlobalTimer.setVisible(true);
+        stopIconGlobalTimer.setVisible(false);
 
-    // Panel for Timer and Icons
-    JPanel timerAndIconsPanel = new JPanel();
-    timerAndIconsPanel.setLayout(new GridBagLayout());
-    timerAndIconsPanel.setBackground(SECONDARY_COLOR); // Set background color
-    timerAndIconsPanel.setOpaque(false); // Make transparent
-    GridBagConstraints gbc = new GridBagConstraints();
-    gbc.insets = new Insets(0, 5, 0, 5); // Spacing between components
-    gbc.anchor = GridBagConstraints.WEST;
+        // Panel for Timer and Icons
+        JPanel timerAndIconsPanel = new JPanel();
+        timerAndIconsPanel.setLayout(new GridBagLayout());
+        timerAndIconsPanel.setBackground(SECONDARY_COLOR); // Set background color
+        timerAndIconsPanel.setOpaque(false); // Make transparent
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(0, 5, 0, 5); // Spacing between components
+        gbc.anchor = GridBagConstraints.WEST;
 
-    // Add Timer Label
-    gbc.gridx = 0;
-    gbc.gridy = 0;
-    timerAndIconsPanel.add(globalTimerLabel, gbc);
+        // Add Timer Label
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        timerAndIconsPanel.add(globalTimerLabel, gbc);
 
-    // Add Start Icon
-    gbc.gridx = 1;
-    timerAndIconsPanel.add(startIconGlobalTimer, gbc);
+        // Add Start Icon
+        gbc.gridx = 1;
+        timerAndIconsPanel.add(startIconGlobalTimer, gbc);
 
-    // Add Stop Icon
-    gbc.gridx = 2;
-    timerAndIconsPanel.add(stopIconGlobalTimer, gbc);
+        // Add Stop Icon
+        gbc.gridx = 2;
+        timerAndIconsPanel.add(stopIconGlobalTimer, gbc);
 
-    // Username Label
-    JLabel userAvatar = FolderListUtils.createUserAvatar("images/waqas-ahmed", "Username");
+        // Username Label
+        JLabel userAvatar = FolderListUtils.createUserAvatar("image/nabeel.jpg", "Username");
 
 
-    // Panel to align Timer and Icons
-    JPanel rightPanel = new JPanel();
-    rightPanel.setLayout(new BorderLayout());
-    rightPanel.add(timerAndIconsPanel, BorderLayout.CENTER);
-    rightPanel.add(userAvatar, BorderLayout.EAST);
-    rightPanel.setBackground(SECONDARY_COLOR); // Set background color
-    rightPanel.setOpaque(false); // Make transparent
+        // Panel to align Timer and Icons
+        JPanel rightPanel = new JPanel();
+        rightPanel.setLayout(new BorderLayout());
+        rightPanel.add(timerAndIconsPanel, BorderLayout.CENTER);
+        rightPanel.add(userAvatar, BorderLayout.EAST);
+        rightPanel.setBackground(SECONDARY_COLOR); // Set background color
+        rightPanel.setOpaque(false); // Make transparent
 
-    // Add Components to Timer Panel
-    timerPanel.add(taskInfoPanel, BorderLayout.WEST);
-    timerPanel.add(rightPanel, BorderLayout.EAST);
+        // Add Components to Timer Panel
+        timerPanel.add(taskInfoPanel, BorderLayout.WEST);
+        timerPanel.add(rightPanel, BorderLayout.EAST);
 
-    return timerPanel;
-}
+        return timerPanel;
+    }
 
 
     private JPanel createAddProjectPanel() {
@@ -342,12 +342,15 @@ private JPanel createTimerPanel() {
         button1.setAlignmentX(Component.CENTER_ALIGNMENT);
         button2.setAlignmentX(Component.CENTER_ALIGNMENT);
         button3.setAlignmentX(Component.CENTER_ALIGNMENT);
+        sidePanel.add(Box.createVerticalStrut(30));
 
-        sidePanel.add(Box.createVerticalGlue()); // Pushes buttons to the top
+
+
+//        sidePanel.add(Box.createVerticalGlue()); // Pushes buttons to the top
         sidePanel.add(button1);
-        sidePanel.add(Box.createVerticalStrut(10)); // Space between buttons
+        sidePanel.add(Box.createVerticalStrut(50)); // Space between buttons
         sidePanel.add(button2);
-        sidePanel.add(Box.createVerticalStrut(10)); // Space between buttons
+        sidePanel.add(Box.createVerticalStrut(50)); // Space between buttons
         sidePanel.add(button3);
         sidePanel.add(Box.createVerticalGlue()); // Pushes buttons to the bottom
 
@@ -617,6 +620,8 @@ private JPanel createTimerPanel() {
         addDialog.setVisible(true);
     }
 
+
+
     private void populateFolders() {
         folderPanel.removeAll();
         for (Project project : projects) {
@@ -702,6 +707,21 @@ private JPanel createTimerPanel() {
             taskPanelR.repaint();
         });
     }
+//
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
 
     // Custom cell renderer for Task column
     private class TaskCellRenderer extends JPanel implements TableCellRenderer {
@@ -712,14 +732,62 @@ private JPanel createTimerPanel() {
         public TaskCellRenderer() {
             setLayout(new FlowLayout(FlowLayout.LEFT));
             taskLabel = new JLabel();
-            startButton = new JButton("Start");
-            stopButton = new JButton("Stop");
+            startButton = new JButton();
+            stopButton = new JButton();
 
+            // Load icons (adjust paths and sizes as needed)
+            ImageIcon startIcon = loadImageIcon("icons/small-start-icon.png", 30, 30);
+            ImageIcon stopIcon = loadImageIcon("icons/small-pause-con.png", 30, 30);
+
+            if (startIcon != null) {
+                startButton.setIcon(startIcon);
+            }
+            if (stopIcon != null) {
+                stopButton.setIcon(stopIcon);
+            }
+
+            // Remove button text and set preferred size
+            startButton.setText(null);
+            stopButton.setText(null);
+            startButton.setPreferredSize(new Dimension(30, 30));
+            stopButton.setPreferredSize(new Dimension(30, 30));
+            startButton.setBorderPainted(false);  // Remove the button border
+            stopButton.setBorderPainted(false);   // Remove the button border
+            startButton.setOpaque(false);
+            startButton.setContentAreaFilled(false);
+            stopButton.setOpaque(false);
+            stopButton.setContentAreaFilled(false);
+
+
+
+            // Initial state
             stopButton.setEnabled(false);
 
-            add(taskLabel);
             add(startButton);
             add(stopButton);
+            add(taskLabel);
+
+
+            // Action listeners added only once
+            startButton.addActionListener(e -> {
+                Task task = (Task) startButton.getClientProperty("task");
+                if (task != null) {
+                    startTimer(task);
+                    task.setRunning(true);
+                    startButton.setEnabled(false);
+                    stopButton.setEnabled(true);
+                }
+            });
+
+            stopButton.addActionListener(e -> {
+                Task task = (Task) stopButton.getClientProperty("task");
+                if (task != null) {
+                    stopTimer();
+                    task.setRunning(false);
+                    stopButton.setEnabled(false);
+                    startButton.setEnabled(true);
+                }
+            });
         }
 
         @Override
@@ -728,13 +796,19 @@ private JPanel createTimerPanel() {
             taskLabel.setText(task.getName());
             startButton.setEnabled(!task.isRunning());
             stopButton.setEnabled(task.isRunning());
+            startButton.setVisible(!task.isRunning());
+            stopButton.setVisible(task.isRunning());
 
-            startButton.addActionListener(e -> startTimer(task));
-            stopButton.addActionListener(e -> stopTimer());
+            // Store task reference in buttons
+            startButton.putClientProperty("task", task);
+            stopButton.putClientProperty("task", task);
+
+
 
             return this;
         }
     }
+
 
     // Custom cell editor for Task column
     private class TaskCellEditor extends AbstractCellEditor implements TableCellEditor {
@@ -755,6 +829,36 @@ private JPanel createTimerPanel() {
             return null; // Not used in this context
         }
     }
+
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     private void showAddTaskDialog(Project project) {
@@ -800,11 +904,16 @@ private JPanel createTimerPanel() {
     }
 
     private void startTimer(Task task) {
+        System.out.println("Start timer: " + task.getName());
+
         stopTimer();  // Stop any existing timer
         currentTask = task;
         currentProject = projects.stream().filter(p -> p.getId().equals(selectedProjectId)).findFirst().orElse(null);
         currentTaskDetailsLabel.setText("Time Spent: " + currentTask.getTimeSpent());
         currentTaskLabel.setText(currentProject.getName());
+
+        // Set task as running
+        task.setRunning(true);
 
         // Determine the row index of the current task
         currentTaskRowIndex = -1;
@@ -816,19 +925,11 @@ private JPanel createTimerPanel() {
             }
         }
 
-        // startButton.setEnabled(false);
-        // stopButton.setEnabled(true);
-
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        updateTimeSpent();
-                    }
-                });
+                SwingUtilities.invokeLater(() -> updateTimeSpent());
             }
         }, 1000, 1000);
     }
@@ -837,13 +938,17 @@ private JPanel createTimerPanel() {
         if (timer != null) {
             timer.cancel();
         }
+        if (currentTask != null) {
+            currentTask.setRunning(false);
+        }
         currentTask = null;
         currentProject = null;
         currentTaskDetailsLabel.setText("No task running");
-        // startButton.setEnabled(true);
-        // stopButton.setEnabled(false);
-        showTasks(selectedProjectId);  // Refresh task list to remove highlighting
+
+        // Refresh task list or table to update button states
+        showTasks(selectedProjectId);
     }
+
 
 //    private void updateTimeSpent() {
 //        if (currentTask != null) {
