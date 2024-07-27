@@ -103,77 +103,95 @@ public class FolderList extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         JPanel mainPanel = new JPanel(new BorderLayout(MARGIN_SIZE, MARGIN_SIZE));
         mainPanel.setBackground(PRIMARY_COLOR);
-        
+
         addSidePanel(mainPanel);
 
-        //centerPanel
+
+        JPanel centerPanel = createCenterPanel();
+
+
+        centerPanel.add(createTimerPanel());
+
+        centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE));
+
+        // Add Project Panel
+
+
+        centerPanel.add(createAddProjectPanel());
+
+        centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE));
+
+        // Folder Panel
+
+        centerPanel.add(createFolderPanel());
+
+        centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE)); // Add vertical gap
+
+
+        centerPanel.add(createSearchPanel());
+
+
+
+        projects = fetchProjects();
+
+        startGlobalTimer();
+
+
+        timer = new Timer();
+
+
+
+        selectedProjectId = projects.isEmpty() ? null : projects.get(0).getId();  // Select the first project if available
+        populateFolders();
+        if (selectedProjectId != null) {
+            showTasks(selectedProjectId);
+        }
+
+        // Task Panel
+
+        centerPanel.add(createTaskPanel());
+        mainPanel.add(centerPanel, BorderLayout.CENTER);
+
+
+
+        add(mainPanel, BorderLayout.CENTER);
+
+        setVisible(true);
+
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            public void componentResized(java.awt.event.ComponentEvent evt) {
+                onWindowResize();
+            }
+        });
+    }
+
+    private JPanel createCenterPanel() {
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS)); // Use BoxLayout for vertical stacking
         centerPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
         centerPanel.setBackground(PRIMARY_COLOR);
+        return centerPanel;
+    }
 
 
-        // Fetch projects from API
-        String apiUrl = "http://localhost:3000/getProjects";
-        String response = HttpUtil.sendGetRequest(apiUrl);
-
-        // Parse JSON response and initialize projects
-        projects = new ArrayList<>();
-        try {
-            JSONArray jsonArray = new JSONArray(response);
-            for (int i = 0; i < jsonArray.length(); i++) {
-                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                List<Task> tasks = new ArrayList<>();
-                JSONArray tasksArray = jsonObject.optJSONArray("tasks");
-                if (tasksArray != null) {
-                    for (int j = 0; j < tasksArray.length(); j++) {
-                        JSONObject taskObject = tasksArray.getJSONObject(j);
-
-                        // Extract values from JSON object
-                        String taskId = taskObject.optString("id", UUID.randomUUID().toString());
-                        String taskName = taskObject.optString("name", "New Task");
-                        String taskDescription = taskObject.optString("description", "Description of the new task");
-                        String taskCreateDate = taskObject.optString("createDate", "2024-07-25");
-                        String taskStatus = taskObject.optString("status", "Open");
-                        String taskDuration = taskObject.optString("duration", "00:00:00");
-
-                        // Create new Task object with extracted values
-                        Task newTask = new Task(taskId, taskName, taskDescription, taskCreateDate, taskStatus, taskDuration);
-
-                        // Add the new Task to the list
-                        tasks.add(newTask);
-                    }
-                }
-
-                Project project = new Project(
-                        jsonObject.getString("id"),
-                        jsonObject.getString("name"),
-                        tasks
-                );
-                projects.add(project);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // Timer Panel
+    private JPanel createTimerPanel() {
         JPanel timerPanel = new JPanel();
         timerPanel.setPreferredSize(new Dimension(getWidth(), 48)); // Fixed height of 48 pixels
         timerPanel.setBackground(SECONDARY_COLOR);
         timerPanel.setLayout(new BorderLayout());
         timerPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
 
-// Current Task Labels
+        // Current Task Labels
         currentTaskLabel = new JLabel("Project Name");
         currentTaskLabel.setHorizontalAlignment(SwingConstants.LEFT);
         currentTaskDetailsLabel = new JLabel("No task selected");
         currentTaskLabel.setForeground(PRIMARY_TEXT_COLOR); // Set text color
         currentTaskDetailsLabel.setForeground(PRIMARY_TEXT_COLOR); // Set text color
 
-// Add spacing between project name and task details
+        // Add spacing between project name and task details
         currentTaskDetailsLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0)); // Adds top margin of 5 pixels
 
-// Panel for Task Information
+        // Panel for Task Information
         JPanel taskInfoPanel = new JPanel();
         taskInfoPanel.setLayout(new BoxLayout(taskInfoPanel, BoxLayout.Y_AXIS)); // Stack components vertically
         taskInfoPanel.setBackground(SECONDARY_COLOR); // Match timer panel color
@@ -182,22 +200,20 @@ public class FolderList extends JFrame {
         taskInfoPanel.add(currentTaskDetailsLabel);
         taskInfoPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE)); // Add padding
 
-// Set background color and transparency
-        taskInfoPanel.setBackground(SECONDARY_COLOR);
+        // Set background color and transparency
         taskInfoPanel.setOpaque(false);
         currentTaskLabel.setOpaque(false);
         currentTaskDetailsLabel.setOpaque(false);
 
-// Timer Label
+        // Timer Label
         globalTimerLabel = new JLabel("00:00:00", SwingConstants.LEFT);
         globalTimerLabel.setForeground(PRIMARY_TEXT_COLOR); // Set text color
 
-
-// Start and Stop Buttons for Global Timer
+        // Start and Stop Buttons for Global Timer
         startButtonGlobalTimer = new JButton("Start");
         stopButtonGlobalTimer = new JButton("Stop");
 
-// Button Action Listeners
+        // Button Action Listeners
         startButtonGlobalTimer.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -214,7 +230,7 @@ public class FolderList extends JFrame {
 
         stopButtonGlobalTimer.setVisible(false);
 
-// Panel for Timer and Buttons
+        // Panel for Timer and Buttons
         JPanel timerAndButtonsPanel = new JPanel();
         timerAndButtonsPanel.setLayout(new GridBagLayout());
         timerAndButtonsPanel.setBackground(SECONDARY_COLOR); // Set background color
@@ -223,25 +239,25 @@ public class FolderList extends JFrame {
         gbc.insets = new Insets(0, 5, 0, 5); // Spacing between components
         gbc.anchor = GridBagConstraints.WEST;
 
-// Add Timer Label
+        // Add Timer Label
         gbc.gridx = 0;
         gbc.gridy = 0;
         timerAndButtonsPanel.add(globalTimerLabel, gbc);
 
-// Add Start Button
+        // Add Start Button
         gbc.gridx = 1;
         timerAndButtonsPanel.add(startButtonGlobalTimer, gbc);
 
-// Add Stop Button
+        // Add Stop Button
         gbc.gridx = 2;
         timerAndButtonsPanel.add(stopButtonGlobalTimer, gbc);
 
-// Username Label
+        // Username Label
         JLabel usernameLabel = new JLabel("Username", SwingConstants.RIGHT);
         usernameLabel.setBackground(SECONDARY_COLOR); // Set background color
         usernameLabel.setOpaque(false); // Make transparent
 
-// Panel to align Timer and Buttons
+        // Panel to align Timer and Buttons
         JPanel rightPanel = new JPanel();
         rightPanel.setLayout(new BorderLayout());
         rightPanel.add(timerAndButtonsPanel, BorderLayout.CENTER);
@@ -249,15 +265,15 @@ public class FolderList extends JFrame {
         rightPanel.setBackground(SECONDARY_COLOR); // Set background color
         rightPanel.setOpaque(false); // Make transparent
 
-// Add Components to Timer Panel
+        // Add Components to Timer Panel
         timerPanel.add(taskInfoPanel, BorderLayout.WEST);
         timerPanel.add(rightPanel, BorderLayout.EAST);
 
-// Add Timer Panel to Center Panel
-        centerPanel.add(timerPanel);
-        centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE));
+        return timerPanel;
+    }
 
-        // Add Project Panel
+
+    private JPanel createAddProjectPanel() {
         JPanel addProjectPanel = new JPanel();
         addProjectPanel.setPreferredSize(new Dimension(getWidth(), 40));
         addProjectPanel.setLayout(new BorderLayout());
@@ -265,161 +281,30 @@ public class FolderList extends JFrame {
         addProjectPanel.setOpaque(false); // Make panel transparent
         addProjectPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
 
-        JButton addProjectButton = new JButton("Add Project");
+        ImageIcon addProjectIcon = loadImageIcon("icons/add-project-icon.png", 30, 30); // Adjust path and size as needed
+
+        JButton addProjectButton = new JButton();
+        if (addProjectIcon != null) {
+            addProjectButton.setIcon(addProjectIcon); // Set the icon
+        } else {
+            addProjectButton.setText("Add Project"); // Fallback text if icon not found
+        }
+
         addProjectButton.setBackground(WARNING_COLOR);
         addProjectButton.setPreferredSize(new Dimension(120, 30));
         addProjectPanel.add(addProjectButton, BorderLayout.EAST);
-        centerPanel.add(addProjectPanel);
-        centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE));
 
-        // Folder Panel
-        folderPanel = new JPanel();
-        folderPanel.setPreferredSize(new Dimension(getWidth(), 150));
-        folderPanel.setBackground(SECONDARY_COLOR);
-        folderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        folderPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
-// Create JScrollPane for folderPanel
-        JScrollPane folderScrollPane = new JScrollPane(folderPanel);
-        folderScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
-        folderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
-        folderScrollPane.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
-
-        folderScrollPane.getViewport().setOpaque(false);
-        folderScrollPane.setOpaque(false);
-        folderScrollPane.setBackground(SECONDARY_COLOR);
-
-// Customize the horizontal scrollbar
-        JScrollBar horizontalScrollBar = folderScrollPane.getHorizontalScrollBar();
-        horizontalScrollBar.setUnitIncrement(16); // Adjust horizontal scrollbar sensitivity
-        horizontalScrollBar.setUI(new BasicScrollBarUI() {
-            @Override
-            protected void configureScrollBarColors() {
-                this.thumbColor = SECONDARY_COLOR; // Set thumb color
-                this.trackColor = Color.GRAY;      // Set track color (optional)
-            }
-
-            @Override
-            protected JButton createDecreaseButton(int orientation) {
-                return createInvisibleButton(); // Hide the left arrow button
-            }
-
-            @Override
-            protected JButton createIncreaseButton(int orientation) {
-                return createInvisibleButton(); // Hide the right arrow button
-            }
-
-            private JButton createInvisibleButton() {
-                JButton button = new JButton();
-                button.setPreferredSize(new Dimension(0, 0));
-                button.setMinimumSize(new Dimension(0, 0));
-                button.setMaximumSize(new Dimension(0, 0));
-                return button;
-            }
-        });
-
-// Round corners of the JScrollPane
-        folderScrollPane.setViewportBorder(BorderFactory.createLineBorder(SECONDARY_COLOR, 2, true)); // True for rounded corners
-
-// Add to center panel
-        centerPanel.add(folderScrollPane);
-        centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE)); // Add vertical gap
-
-
-
-
-
-
-        //
-
-        // Search Panel
-        JPanel searchPanel = new JPanel();
-        searchPanel.setPreferredSize(new Dimension(getWidth(), 29)); // Fixed height of 29 pixels
-        searchPanel.setBackground(SECONDARY_COLOR);
-        searchPanel.setLayout(new BorderLayout());
-        searchPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
-
-        JTextField searchField = new JTextField();
-        searchField.setBackground(PRIMARY_COLOR);
-
-        searchField.setPreferredSize(new Dimension(200, 30)); // Set preferred size for text field
-        JButton addTaskButton = new JButton("Add Task");
-        addTaskButton.setBackground(WARNING_COLOR);
-
-
-        searchPanel.add(searchField, BorderLayout.WEST);
-        searchPanel.add(addTaskButton, BorderLayout.EAST);
-        centerPanel.add(searchPanel);
-        centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE)); // Add vertical gap
-
-
-
-        // Panel to show current task information
-
-
-//
-//        startButtonGlobalTimer = new JButton("Start");
-//        stopButtonGlobalTimer = new JButton("Stop");
-//
-//
-//        JPanel buttonPanelGlobalTimer = new JPanel(new FlowLayout(FlowLayout.LEFT));
-//        buttonPanelGlobalTimer.add(startButtonGlobalTimer);
-//        buttonPanelGlobalTimer.add(stopButtonGlobalTimer);
-
-
-
-
-        // add(currentTaskPanel);
-
-        startGlobalTimer();
-
-
-        timer = new Timer();
-
-
-
-        selectedProjectId = projects.isEmpty() ? null : projects.get(0).getId();  // Select the first project if available
-        populateFolders();
-        if (selectedProjectId != null) {
-            showTasks(selectedProjectId);
-        }
-
-        // Task Panel
-        taskPanelR = new JPanel();
-        taskPanelR.setBackground(SECONDARY_COLOR);
-        taskPanelR.setLayout(new BorderLayout());
-        taskPanelR.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
-
-        String[] columnNames = {"Name", "Description", "Create Date", "Status", "Total Time"};
-        Object[][] data = {
-                {"Task 1", "Description 1", "2024-07-23", "Open", "00:00:00"},
-                {"Task 2", "Description 2", "2024-07-23", "In Progress", "00:00:00"}
-        };
-
-        JTable table = new JTable(data, columnNames);
-        JScrollPane tableScrollPane = new JScrollPane(table);
-
-        taskPanelR.add(tableScrollPane, BorderLayout.CENTER);
-        centerPanel.add(taskPanelR);
-
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
-
-        add(mainPanel, BorderLayout.CENTER);
-
-        setVisible(true);
-
-        addComponentListener(new java.awt.event.ComponentAdapter() {
-            public void componentResized(java.awt.event.ComponentEvent evt) {
-                onWindowResize();
-            }
-        });
+        return addProjectPanel;
     }
+
+
 
 
     //side panel container
     private void addSidePanel(JPanel mainPanel) {
         // Side Panel with BorderLayout and margins
         JPanel sidePanelContainer = new JPanel(new BorderLayout());
-        sidePanelContainer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 0)); // Top, Left, Bottom, Right
+        sidePanelContainer.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE)); // Top, Left, Bottom, Right
         sidePanelContainer.setBackground(PRIMARY_COLOR); // Match background to main panel
 
         JPanel sidePanel = new JPanel();
@@ -450,6 +335,189 @@ public class FolderList extends JFrame {
         // Add sidePanelContainer to mainPanel
         mainPanel.add(sidePanelContainer, BorderLayout.WEST);
     }
+
+
+    // Method to create the folder panel with scroll functionality
+    private JScrollPane createFolderPanel() {
+        folderPanel = new JPanel();
+        folderPanel.setPreferredSize(new Dimension(getWidth(), 150));
+        folderPanel.setBackground(SECONDARY_COLOR);
+        folderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        folderPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+
+        // Create JScrollPane for folderPanel
+        JScrollPane folderScrollPane = new JScrollPane(folderPanel);
+        folderScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        folderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+        folderScrollPane.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+
+        folderScrollPane.getViewport().setOpaque(false);
+        folderScrollPane.setOpaque(false);
+        folderScrollPane.setBackground(SECONDARY_COLOR);
+
+        // Customize the horizontal scrollbar
+        JScrollBar horizontalScrollBar = folderScrollPane.getHorizontalScrollBar();
+        horizontalScrollBar.setUnitIncrement(16); // Adjust horizontal scrollbar sensitivity
+        horizontalScrollBar.setUI(new BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                this.thumbColor = SECONDARY_COLOR; // Set thumb color
+                this.trackColor = Color.GRAY;      // Set track color (optional)
+            }
+
+            @Override
+            protected JButton createDecreaseButton(int orientation) {
+                return createInvisibleButton(); // Hide the left arrow button
+            }
+
+            @Override
+            protected JButton createIncreaseButton(int orientation) {
+                return createInvisibleButton(); // Hide the right arrow button
+            }
+
+            private JButton createInvisibleButton() {
+                JButton button = new JButton();
+                button.setPreferredSize(new Dimension(0, 0));
+                button.setMinimumSize(new Dimension(0, 0));
+                button.setMaximumSize(new Dimension(0, 0));
+                return button;
+            }
+        });
+
+        // Round corners of the JScrollPane
+        folderScrollPane.setViewportBorder(BorderFactory.createLineBorder(SECONDARY_COLOR, 2, true)); // True for rounded corners
+
+        return folderScrollPane;
+    }
+
+
+    private static ImageIcon loadImageIcon(String path, int width, int height) {
+        // Load the image from the classpath
+        ImageIcon icon = new ImageIcon(ClassLoader.getSystemResource(path));
+        if (icon != null) {
+            Image image = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+            return new ImageIcon(image);
+        } else {
+            System.out.println("Image not found at path: " + path);
+            return null;
+        }
+    }
+
+
+
+
+    //serarch panel
+    private JPanel createSearchPanel() {
+        JPanel searchPanel = new JPanel();
+        searchPanel.setPreferredSize(new Dimension(getWidth(), 29)); // Fixed height of 29 pixels
+        searchPanel.setBackground(SECONDARY_COLOR);
+        searchPanel.setLayout(new BorderLayout());
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+
+        JTextField searchField = new JTextField();
+        searchField.setBackground(PRIMARY_COLOR);
+        searchField.setPreferredSize(new Dimension(200, 30)); // Set preferred size for text field
+
+        JButton addTaskButton = new JButton("Add Task");
+        addTaskButton.setBackground(WARNING_COLOR);
+
+        searchPanel.add(searchField, BorderLayout.WEST);
+        searchPanel.add(addTaskButton, BorderLayout.EAST);
+
+        return searchPanel;
+    }
+
+
+
+
+
+
+
+
+
+    private List<Project> fetchProjects() {
+        List<Project> projectList = new ArrayList<>();
+        String apiUrl = "http://localhost:3000/getProjects";
+        String response = HttpUtil.sendGetRequest(apiUrl);
+
+        try {
+            JSONArray jsonArray = new JSONArray(response);
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                List<Task> tasks = parseTasks(jsonObject.optJSONArray("tasks"));
+
+                Project project = new Project(
+                        jsonObject.getString("id"),
+                        jsonObject.getString("name"),
+                        tasks
+                );
+                projectList.add(project);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return projectList;
+    }
+
+    private List<Task> parseTasks(JSONArray tasksArray) {
+        List<Task> tasks = new ArrayList<>();
+        if (tasksArray != null) {
+            for (int i = 0; i < tasksArray.length(); i++) {
+                JSONObject taskObject = tasksArray.getJSONObject(i);
+
+                // Extract values from JSON object
+                String taskId = taskObject.optString("id", UUID.randomUUID().toString());
+                String taskName = taskObject.optString("name", "New Task");
+                String taskDescription = taskObject.optString("description", "Description of the new task");
+                String taskCreateDate = taskObject.optString("createDate", "2024-07-25");
+                String taskStatus = taskObject.optString("status", "Open");
+                String taskDuration = taskObject.optString("duration", "00:00:00");
+
+                // Create new Task object with extracted values
+                Task newTask = new Task(taskId, taskName, taskDescription, taskCreateDate, taskStatus, taskDuration);
+
+                // Add the new Task to the list
+                tasks.add(newTask);
+            }
+        }
+        return tasks;
+    }
+
+
+
+
+
+
+    //task panel
+    private JPanel createTaskPanel() {
+        taskPanelR = new JPanel();
+        taskPanelR.setBackground(SECONDARY_COLOR);
+        taskPanelR.setLayout(new BorderLayout());
+        taskPanelR.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+
+        String[] columnNames = {"Name", "Description", "Create Date", "Status", "Total Time"};
+        Object[][] data = {
+                {"Task 1", "Description 1", "2024-07-23", "Open", "00:00:00"},
+                {"Task 2", "Description 2", "2024-07-23", "In Progress", "00:00:00"}
+        };
+
+        JTable table = new JTable(data, columnNames);
+        JScrollPane tableScrollPane = new JScrollPane(table);
+
+        taskPanelR.add(tableScrollPane, BorderLayout.CENTER);
+
+        return taskPanelR;
+    }
+
+
+
+
+
+
+
+
+
+
 
 
     private void startGlobalEventListener() {
@@ -753,14 +821,6 @@ public class FolderList extends JFrame {
         showTasks(selectedProjectId);  // Refresh task list to remove highlighting
     }
 
-//    private void updateTimeSpent() {
-//        if (currentTask != null) {
-//            currentTask.incrementTimeSpent();
-//            currentTaskDetailsLabel.setText(currentProject.getName() + " - " + currentTask.getName() + " - Time Spent: " + currentTask.getTimeSpent());
-//            showTasks(selectedProjectId);  // Refresh task list to update time spent
-//        }
-//    }
-
 
     private void updateTimeSpent() {
         if (currentTask != null) {
@@ -897,7 +957,7 @@ public class FolderList extends JFrame {
         folderScrollPane.setBounds(20, 100, frameWidth - 40, 100);
         taskScrollPane.setBounds(20, 250, frameWidth - 40, getHeight() - 310);
         addButton.setBounds(frameWidth - 130, 10, 120, 30);
-        currentTaskPanel.setBounds(20, 10, frameWidth - 180, 80);
+//        currentTaskPanel.setBounds(20, 10, frameWidth - 180, 80);
     }
 
     public static void main(String[] args) {
