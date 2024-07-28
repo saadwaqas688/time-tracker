@@ -6,38 +6,51 @@ import org.jnativehook.keyboard.NativeKeyEvent;
 import org.jnativehook.keyboard.NativeKeyListener;
 import org.jnativehook.mouse.NativeMouseEvent;
 import org.jnativehook.mouse.NativeMouseMotionListener;
+
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class GlobalEventListener implements NativeKeyListener, NativeMouseMotionListener{
+
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.*;
+
+
+public class GlobalEventListener implements NativeKeyListener, NativeMouseMotionListener {
 
     private static final String LOG_FILE = "user_activity.log";
+    private static final String SCREENSHOT_DIR = "screenshots";
+
     private BufferedWriter writer;
     private int mouseMoveCount = 0;
     private int keyPressCount = 0;
     private long lastActivityTime = System.currentTimeMillis();
 
-
-
     public GlobalEventListener() {
-
+        try {
+            openLogFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) throws IOException {
         GlobalEventListener listener = new GlobalEventListener();
-        listener.openLogFile();
         listener.startPeriodicLogging();
 
         try {
             // Register the native hook
             GlobalScreen.registerNativeHook();
 
-            // Add keyboard listener first
+            // Add keyboard and mouse listeners
             GlobalScreen.addNativeKeyListener(listener);
             GlobalScreen.addNativeMouseMotionListener(listener);
 
@@ -56,19 +69,11 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
         }
     }
 
-    public void openLogFilePublic() throws IOException {
-        openLogFile();
-    }
-
-    public void closeLogFilePublic() throws IOException {
-        closeLogFile();
-    }
-
-    private void openLogFile() throws IOException {
+    public void openLogFile() throws IOException {
         writer = new BufferedWriter(new FileWriter(LOG_FILE, true)); // Append to existing file
     }
 
-    private void closeLogFile() throws IOException {
+    public void closeLogFile() throws IOException {
         if (writer != null) {
             writer.close();
         }
@@ -81,17 +86,15 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
         writer.flush();
     }
 
-    public void startPeriodicLoggingPublic() {
-        startPeriodicLogging();
-    }
-
     public void startPeriodicLogging() {
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 try {
-                    logEvent("Mouse Moves: " + mouseMoveCount + ", Key Presses: " + keyPressCount);
+                    logEvent(getCounts() + ", Focused Window: " + getFocusedWindowTitle());
+                    takeScreenshots();
+
                     mouseMoveCount = 0; // Reset the count after logging
                     keyPressCount = 0;  // Reset the count after logging
                 } catch (IOException e) {
@@ -101,6 +104,33 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
         }, 0, 15000); // 15000 ms = 15 seconds
     }
 
+    private String getFocusedWindowTitle() {
+        try {
+            // Run xprop to get the ID of the currently active window
+            Process process = Runtime.getRuntime().exec("xprop -root _NET_ACTIVE_WINDOW");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line = reader.readLine();
+
+            if (line != null) {
+                // Extract window ID from the output
+                String windowId = line.split(" ")[line.split(" ").length - 1];
+
+                // Run xprop to get the name of the window using its ID
+                Process windowProcess = Runtime.getRuntime().exec("xprop -id " + windowId + " WM_NAME");
+                BufferedReader windowReader = new BufferedReader(new InputStreamReader(windowProcess.getInputStream()));
+                String windowTitle = windowReader.readLine();
+
+                if (windowTitle != null) {
+                    String title = windowTitle.split("=")[1].trim().replace("\"", "");
+                    String[] parts = title.split(" - ");
+                    return parts[0].trim();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "Unknown";
+    }
 
     private synchronized void resetIdleState() {
         lastActivityTime = System.currentTimeMillis();
@@ -108,32 +138,26 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
         keyPressCount = 0;
     }
 
-
     @Override
     public void nativeKeyPressed(NativeKeyEvent e) {
         synchronized (this) {
             keyPressCount++;
             lastActivityTime = System.currentTimeMillis();
         }
-
     }
 
     @Override
     public void nativeMouseMoved(NativeMouseEvent e) {
         synchronized (this) {
-
             mouseMoveCount++;
             lastActivityTime = System.currentTimeMillis();
         }
-
     }
-
 
     @Override
     public void nativeKeyReleased(NativeKeyEvent e) {
         // Optional handling for key release events
     }
-
 
     @Override
     public void nativeKeyTyped(NativeKeyEvent e) {
@@ -144,6 +168,8 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
     public void nativeMouseDragged(NativeMouseEvent e) {
         // Optional handling for mouse drag events
     }
+
+
 
     // Method to calculate idle time
     public long getIdleTime() {
@@ -156,4 +182,32 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
     }
 
 
+    private void takeScreenshots() {
+        try {
+            File screenshotDir = new File(SCREENSHOT_DIR);
+            if (!screenshotDir.exists()) {
+                screenshotDir.mkdirs();
+            }
+
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            GraphicsDevice[] screens = ge.getScreenDevices();
+            for (int i = 0; i < screens.length; i++) {
+                GraphicsDevice screen = screens[i];
+                Rectangle screenBounds = screen.getDefaultConfiguration().getBounds();
+
+                Robot robot = new Robot(screen);
+                BufferedImage screenshot = robot.createScreenCapture(screenBounds);
+
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
+                String timestamp = dateFormat.format(new Date());
+                File outputfile = new File(SCREENSHOT_DIR + File.separator + "screenshot_" + timestamp + "_screen" + i + ".png");
+
+                ImageIO.write(screenshot, "png", outputfile);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
+
