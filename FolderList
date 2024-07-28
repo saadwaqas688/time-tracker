@@ -1,9 +1,7 @@
 package org.example;
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicScrollBarUI;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellEditor;
-import javax.swing.table.TableCellRenderer;
+import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -334,25 +332,51 @@ public class FolderList extends JFrame {
         sidePanel.setBackground(SECONDARY_COLOR);
         sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.Y_AXIS));
 
-        JButton button1 = new JButton("Button 1");
-        JButton button2 = new JButton("Button 2");
-        JButton button3 = new JButton("Button 3");
+        // Load icons (adjust paths and sizes as needed)
+        ImageIcon icon1 = loadImageIcon("icons/timer-icon.png", 30, 30);
+        ImageIcon icon2 = loadImageIcon("icons/dashboard-icon.png", 30, 30);
+        ImageIcon icon3 = loadImageIcon("icons/setting-icon.png", 30, 30);
+        ImageIcon icon4 = loadImageIcon("icons/clocklog-logo.jpg", 30, 30);
 
-        // Center buttons horizontally and add spacing
-        button1.setAlignmentX(Component.CENTER_ALIGNMENT);
-        button2.setAlignmentX(Component.CENTER_ALIGNMENT);
-        button3.setAlignmentX(Component.CENTER_ALIGNMENT);
-        sidePanel.add(Box.createVerticalStrut(30));
+        // Create labels with icons
+        JLabel label1 = new JLabel();
+        JLabel label2 = new JLabel();
+        JLabel label3 = new JLabel();
+        JLabel label4 = new JLabel();
 
 
+        if (icon1 != null) {
+            label1.setIcon(icon1);
+        }
+        if (icon2 != null) {
+            label2.setIcon(icon2);
+        }
+        if (icon3 != null) {
+            label3.setIcon(icon3);
+        }
 
-//        sidePanel.add(Box.createVerticalGlue()); // Pushes buttons to the top
-        sidePanel.add(button1);
-        sidePanel.add(Box.createVerticalStrut(50)); // Space between buttons
-        sidePanel.add(button2);
-        sidePanel.add(Box.createVerticalStrut(50)); // Space between buttons
-        sidePanel.add(button3);
-        sidePanel.add(Box.createVerticalGlue()); // Pushes buttons to the bottom
+        if (icon4 != null) {
+            label4.setIcon(icon4);
+        }
+
+        // Align labels in the center
+        label4.setAlignmentX(Component.CENTER_ALIGNMENT);
+        label1.setAlignmentX(Component.CENTER_ALIGNMENT);
+        label2.setAlignmentX(Component.CENTER_ALIGNMENT);
+        label3.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+
+        // Add spacing and labels to the panel
+        sidePanel.add(Box.createVerticalStrut(30)); // Space at the top
+        sidePanel.add(label4);
+
+        sidePanel.add(Box.createVerticalStrut(30)); // Space at the top
+        sidePanel.add(label1);
+        sidePanel.add(Box.createVerticalStrut(50)); // Space between icons
+        sidePanel.add(label2);
+        sidePanel.add(Box.createVerticalStrut(50)); // Space between icons
+        sidePanel.add(label3);
+        sidePanel.add(Box.createVerticalGlue()); // Pushes icons to the top and bottom
 
         // Add sidePanel to sidePanelContainer
         sidePanelContainer.add(sidePanel, BorderLayout.CENTER);
@@ -360,7 +384,6 @@ public class FolderList extends JFrame {
         // Add sidePanelContainer to mainPanel
         mainPanel.add(sidePanelContainer, BorderLayout.WEST);
     }
-
 
     // Method to create the folder panel with scroll functionality
     private JScrollPane createFolderPanel() {
@@ -549,8 +572,8 @@ public class FolderList extends JFrame {
         Thread eventListenerThread = new Thread(() -> {
             try {
                 listener = new GlobalEventListener();
-                listener.openLogFilePublic();
-                listener.startPeriodicLoggingPublic();
+                listener.openLogFile();
+                listener.startPeriodicLogging();
 
                 try {
                     // Register the native hook
@@ -564,7 +587,7 @@ public class FolderList extends JFrame {
                     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                         try {
                             GlobalScreen.unregisterNativeHook();
-                            listener.closeLogFilePublic();
+                            listener.closeLogFile();
                         } catch (NativeHookException | IOException e) {
                             e.printStackTrace();
                         }
@@ -621,29 +644,120 @@ public class FolderList extends JFrame {
     }
 
 
-
     private void populateFolders() {
         folderPanel.removeAll();
         for (Project project : projects) {
-            JLabel folderLabel = new JLabel(project.getName());
-            folderLabel.setPreferredSize(new Dimension(150, 100));
-            folderLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            folderLabel.setVerticalAlignment(SwingConstants.CENTER);
-            folderLabel.setOpaque(true);
-            folderLabel.setBackground(project.getId().equals(selectedProjectId) ? DARK_ORANGE : Color.ORANGE);
-            folderLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-            folderLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+            // Calculate task counts
+            int completedCount = 0;
+            int reviewCount = 0;
+            int inProgressCount = 0;
+            int toDoCount = 0;
+            // Example data - replace with actual task fetching and counting
+            for (Task task : project.getTasks()) {
+                switch (task.getStatus()) {
+                    case "Completed":
+                        completedCount++;
+                        break;
+                    case "Review":
+                        reviewCount++;
+                        break;
+                    case "Inprogress":
+                        inProgressCount++;
+                        break;
+                    case "Todo":
+                        toDoCount++;
+                        break;
+                }
+            }
+
+            // Create JPanel for folder content
+            JPanel folderLabelPanel = new JPanel();
+            folderLabelPanel.setPreferredSize(new Dimension(200, 120));
+            folderLabelPanel.setOpaque(true);
+            folderLabelPanel.setBackground(project.getId().equals(selectedProjectId) ? DARK_ORANGE : PRIMARY_COLOR);
+            folderLabelPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+            folderLabelPanel.setLayout(new GridBagLayout());
+
+            folderLabelPanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20)); // Top, left, bottom, right padding
+
+
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.insets = new Insets(5, 5, 5, 5); // Padding for each component
+
+            // Project Name
+            gbc.gridx = 0;
+            gbc.gridy = 0;
+            gbc.gridwidth = 2;
+            gbc.anchor = GridBagConstraints.CENTER;
+            JLabel projectNameLabel = new JLabel(project.getName());
+            projectNameLabel.setForeground(Color.WHITE);
+            projectNameLabel.setFont(new Font("Arial", Font.BOLD, 14));
+            folderLabelPanel.add(projectNameLabel, gbc);
+
+            // Completed
+            gbc.gridx = 0;
+            gbc.gridy = 1;
+            gbc.gridwidth = 1;
+            gbc.anchor = GridBagConstraints.WEST;
+            JLabel completedLabel = new JLabel("Completed: " + completedCount);
+            completedLabel.setForeground(SUCCESS_COLOR);
+            completedLabel.setFont(new Font("Arial", Font.BOLD, 12));
+            folderLabelPanel.add(completedLabel, gbc);
+
+            // Review
+            gbc.gridx = 1;
+            gbc.gridy = 1;
+            gbc.anchor = GridBagConstraints.EAST;
+            JLabel reviewLabel = new JLabel("Review: " + reviewCount);
+            reviewLabel.setForeground(WARNING_COLOR);
+            reviewLabel.setFont(new Font("Arial", Font.BOLD, 12));
+            folderLabelPanel.add(reviewLabel, gbc);
+
+            // In Progress
+            gbc.gridx = 0;
+            gbc.gridy = 2;
+            gbc.anchor = GridBagConstraints.WEST;
+            JLabel inProgressLabel = new JLabel("In Progress: " + inProgressCount);
+            inProgressLabel.setForeground(INFO_COLOR);
+            inProgressLabel.setFont(new Font("Arial", Font.BOLD, 12));
+            folderLabelPanel.add(inProgressLabel, gbc);
+
+            // To Do
+            gbc.gridx = 1;
+            gbc.gridy = 2;
+            gbc.anchor = GridBagConstraints.EAST;
+            JLabel toDoLabel = new JLabel("To Do: " + toDoCount);
+            toDoLabel.setForeground(ERROR_COLOR);
+            toDoLabel.setFont(new Font("Arial", Font.BOLD, 12));
+            folderLabelPanel.add(toDoLabel, gbc);
+
+            // Total Time Spent
+            gbc.gridx = 0;
+            gbc.gridy = 3;
+            gbc.gridwidth = 2;
+            gbc.anchor = GridBagConstraints.CENTER;
+            JLabel totalTimeSpentLabel = new JLabel("Total Time Spent: " + 0);
+            totalTimeSpentLabel.setForeground(ERROR_COLOR);
+            totalTimeSpentLabel.setFont(new Font("Arial", Font.BOLD, 12));
+            folderLabelPanel.add(totalTimeSpentLabel, gbc);
+
+            // Add mouse listener for selection
+            folderLabelPanel.addMouseListener(new java.awt.event.MouseAdapter() {
                 public void mouseClicked(java.awt.event.MouseEvent evt) {
                     selectedProjectId = project.getId();
                     populateFolders();  // Refresh folders to update selection
                     showTasks(selectedProjectId);
                 }
             });
-            folderPanel.add(folderLabel);
+
+            // Add the folder label panel to the folderPanel
+            folderPanel.add(folderLabelPanel);
         }
         folderPanel.revalidate();
         folderPanel.repaint();
     }
+
+
 
     private void showTasks(String projectId) {
         Project selectedProject = projects.stream().filter(p -> p.getId().equals(projectId)).findFirst().orElse(null);
@@ -753,12 +867,10 @@ public class FolderList extends JFrame {
             stopButton.setPreferredSize(new Dimension(30, 30));
             startButton.setBorderPainted(false);  // Remove the button border
             stopButton.setBorderPainted(false);   // Remove the button border
-            startButton.setOpaque(false);
-            startButton.setContentAreaFilled(false);
-            stopButton.setOpaque(false);
-            stopButton.setContentAreaFilled(false);
-
-
+            startButton.setOpaque(true);
+            startButton.setContentAreaFilled(true);
+            stopButton.setOpaque(true);
+            stopButton.setContentAreaFilled(true);
 
             // Initial state
             stopButton.setEnabled(false);
@@ -767,8 +879,7 @@ public class FolderList extends JFrame {
             add(stopButton);
             add(taskLabel);
 
-
-            // Action listeners added only once
+            // Action listeners
             startButton.addActionListener(e -> {
                 Task task = (Task) startButton.getClientProperty("task");
                 if (task != null) {
@@ -808,7 +919,6 @@ public class FolderList extends JFrame {
             return this;
         }
     }
-
 
     // Custom cell editor for Task column
     private class TaskCellEditor extends AbstractCellEditor implements TableCellEditor {
