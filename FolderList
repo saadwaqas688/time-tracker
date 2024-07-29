@@ -57,8 +57,7 @@ public class FolderList extends JFrame {
     public static final Color WARNING_COLOR = new Color(244, 162, 97);
     public static final Color ERROR_COLOR = new Color(251, 93, 93);
     public static final Color ACCENT_COLOR = new Color(231, 111, 81);
-
-    private static final Color DARK_ORANGE = new Color(255, 140, 0);
+    private static final Color DARK_ORANGE = new Color(193,193,215);
     //
 
     private static final Color LIGHT_BLUE = new Color(173, 216, 230);
@@ -194,6 +193,12 @@ public class FolderList extends JFrame {
         // Current Task Labels
         currentTaskLabel = new JLabel("Project Name");
         currentTaskLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        currentTaskLabel.setFont(new Font("Arial", Font.PLAIN, 15)); // Adjust font name and size as needed
+        Font boldFont1 = currentTaskLabel.getFont().deriveFont(Font.BOLD);
+        currentTaskLabel.setFont(boldFont1);
+
+
+
         currentTaskDetailsLabel = new JLabel("No task selected");
         currentTaskLabel.setForeground(PRIMARY_TEXT_COLOR); // Set text color
         currentTaskDetailsLabel.setForeground(PRIMARY_TEXT_COLOR); // Set text color
@@ -213,6 +218,9 @@ public class FolderList extends JFrame {
         // Timer Label
         globalTimerLabel = new JLabel("00:00:00", SwingConstants.LEFT);
         globalTimerLabel.setForeground(PRIMARY_TEXT_COLOR); // Set text color
+        globalTimerLabel.setFont(new Font("Arial", Font.PLAIN, 24)); // Adjust font name and size as needed
+        Font boldFont = globalTimerLabel.getFont().deriveFont(Font.BOLD);
+        globalTimerLabel.setFont(boldFont);
         globalTimerLabel.setOpaque(false); // Make label transparent
 
         // Load icons for start and stop
@@ -274,7 +282,7 @@ public class FolderList extends JFrame {
         timerAndIconsPanel.add(stopIconGlobalTimer, gbc);
 
         // Username Label
-        JLabel userAvatar = FolderListUtils.createUserAvatar("image/nabeel.jpg", "Username");
+        JLabel userAvatar = FolderListUtils.createUserAvatar("images/nabeel.jpg", "Username");
 
 
         // Panel to align Timer and Icons
@@ -293,6 +301,30 @@ public class FolderList extends JFrame {
     }
 
 
+//    private JPanel createAddProjectPanel() {
+//        JPanel addProjectPanel = new JPanel();
+//        addProjectPanel.setPreferredSize(new Dimension(getWidth(), 40));
+//        addProjectPanel.setLayout(new BorderLayout());
+//        addProjectPanel.setBackground(ADD_PROJECT_PANEL_COLOR);
+//        addProjectPanel.setOpaque(false); // Make panel transparent
+//        addProjectPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+//
+//        ImageIcon addProjectIcon = loadImageIcon("icons/add-project-icon.png", 30, 30); // Adjust path and size as needed
+//
+//        JButton addProjectButton = new JButton();
+//        if (addProjectIcon != null) {
+//            addProjectButton.setIcon(addProjectIcon); // Set the icon
+//        } else {
+//            addProjectButton.setText("Add Project"); // Fallback text if icon not found
+//        }
+//
+//        addProjectButton.setBackground(WARNING_COLOR);
+//        addProjectButton.setPreferredSize(new Dimension(90, 30));
+//        addProjectPanel.add(addProjectButton, BorderLayout.EAST);
+//
+//        return addProjectPanel;
+//    }
+
     private JPanel createAddProjectPanel() {
         JPanel addProjectPanel = new JPanel();
         addProjectPanel.setPreferredSize(new Dimension(getWidth(), 40));
@@ -310,12 +342,18 @@ public class FolderList extends JFrame {
             addProjectButton.setText("Add Project"); // Fallback text if icon not found
         }
 
+
+        addProjectButton.addActionListener(e -> {
+showAddProjectDialog();
+        });
+
         addProjectButton.setBackground(WARNING_COLOR);
-        addProjectButton.setPreferredSize(new Dimension(120, 30));
+        addProjectButton.setPreferredSize(new Dimension(90, 30));
         addProjectPanel.add(addProjectButton, BorderLayout.EAST);
 
         return addProjectPanel;
     }
+
 
 
 
@@ -333,10 +371,10 @@ public class FolderList extends JFrame {
         sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.Y_AXIS));
 
         // Load icons (adjust paths and sizes as needed)
-        ImageIcon icon1 = loadImageIcon("icons/timer-icon.png", 30, 30);
+        ImageIcon icon1 = loadImageIcon("icons/hollow-clock-icon.png", 30, 30);
         ImageIcon icon2 = loadImageIcon("icons/dashboard-icon.png", 30, 30);
         ImageIcon icon3 = loadImageIcon("icons/setting-icon.png", 30, 30);
-        ImageIcon icon4 = loadImageIcon("icons/clocklog-logo.jpg", 30, 30);
+        ImageIcon icon4 = loadImageIcon("icons/clocklog-icon-with-name.png",80,80);
 
         // Create labels with icons
         JLabel label1 = new JLabel();
@@ -455,25 +493,61 @@ public class FolderList extends JFrame {
 
 
     //serarch panel
+//    private JPanel createSearchPanel() {
+//        JPanel searchPanel = new JPanel();
+//        searchPanel.setPreferredSize(new Dimension(getWidth(), 60));// Fixed height of 29 pixels
+//        searchPanel.setBackground(SECONDARY_COLOR);
+//        searchPanel.setLayout(new BorderLayout());
+//        searchPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+//
+//        JTextField searchField = new JTextField();
+//        searchField.setBackground(PRIMARY_COLOR);
+//        searchField.setPreferredSize(new Dimension(180,35));// Set preferred size for text field
+//
+//        JButton addTaskButton = new JButton("Add Task");
+//        addTaskButton.setBackground(WARNING_COLOR);
+//
+//        searchPanel.add(searchField, BorderLayout.WEST);
+//        searchPanel.add(addTaskButton, BorderLayout.EAST);
+//
+//        return searchPanel;
+//    }
+
     private JPanel createSearchPanel() {
         JPanel searchPanel = new JPanel();
-        searchPanel.setPreferredSize(new Dimension(getWidth(), 29)); // Fixed height of 29 pixels
+        searchPanel.setPreferredSize(new Dimension(getWidth(), 60));// Fixed height of 29 pixels
         searchPanel.setBackground(SECONDARY_COLOR);
         searchPanel.setLayout(new BorderLayout());
         searchPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
 
         JTextField searchField = new JTextField();
         searchField.setBackground(PRIMARY_COLOR);
-        searchField.setPreferredSize(new Dimension(200, 30)); // Set preferred size for text field
+        searchField.setPreferredSize(new Dimension(180,35));// Set preferred size for text field
 
-        JButton addTaskButton = new JButton("Add Task");
+        ImageIcon addTaskIcon = loadImageIcon("icons/add-project-icon.png", 30, 30); // Adjust path and size as needed
+
+        JButton addTaskButton = new JButton();
+        if (addTaskIcon != null) {
+            addTaskButton.setIcon(addTaskIcon); // Set the icon
+        } else {
+            addTaskButton.setText("Add Task"); // Fallback text if icon not found
+        }
+
+
+        addTaskButton.addActionListener(e -> {
+            showAddTaskDialog(currentProject);
+
+        });
+
         addTaskButton.setBackground(WARNING_COLOR);
+        addTaskButton.setPreferredSize(new Dimension(90, 20));
 
         searchPanel.add(searchField, BorderLayout.WEST);
         searchPanel.add(addTaskButton, BorderLayout.EAST);
 
         return searchPanel;
     }
+
 
 
 
@@ -549,8 +623,68 @@ public class FolderList extends JFrame {
                 {"Task 2", "Description 2", "2024-07-23", "In Progress", "00:00:00"}
         };
 
-        JTable table = new JTable(data, columnNames);
-        JScrollPane tableScrollPane = new JScrollPane(table);
+        taskTable = new JTable(data, columnNames);
+
+        // Set default renderer for all cells
+        TableCellRenderer renderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                c.setBackground(Color.BLACK); // Set background color to black
+                c.setForeground(Color.WHITE); // Set text color to white for contrast
+                return c;
+            }
+        };
+        taskTable.setDefaultRenderer(Object.class, renderer);
+
+        // Set table header background color to black
+        JTableHeader header = taskTable.getTableHeader();
+        header.setPreferredSize(new Dimension(100, 40));
+
+        header.setDefaultRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                label.setBackground(SECONDARY_COLOR); // Set header background color to black
+                label.setForeground(Color.WHITE); // Set header text color to white
+                label.setHorizontalAlignment(SwingConstants.CENTER); // Center-align header text
+                return label;
+            }
+        });
+
+
+        taskTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                label.setBackground(Color.BLACK); // Set cell background color to black
+                label.setForeground(Color.WHITE); // Set cell text color to white
+                label.setHorizontalAlignment(SwingConstants.CENTER); // Center-align cell text
+                label.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Add padding to cells
+                return label;
+            }
+        });
+
+        // Set table properties
+        taskTable.setBackground(Color.BLACK); // Set background color for empty areas of the table
+        taskTable.setForeground(Color.WHITE); // Set default text color
+        taskTable.setGridColor(Color.GRAY); // Set grid line color
+        taskTable.setSelectionBackground(Color.DARK_GRAY); // Set selection background color
+        taskTable.setBorder(BorderFactory.createEmptyBorder()); // Remove cell borders
+
+        // Remove table header border
+        header.setBorder(BorderFactory.createEmptyBorder());
+
+        // Add table to a scroll pane and remove scroll pane border
+        JScrollPane scrollPane = new JScrollPane(taskTable);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder()); // Remove scroll pane border
+
+//        frame.add(scrollPane);
+//        frame.pack();
+//        frame.setLocationRelativeTo(null);
+//        frame.setVisible(true);
+
+        JScrollPane tableScrollPane = new JScrollPane(taskTable);
 
         taskPanelR.add(tableScrollPane, BorderLayout.CENTER);
 
@@ -643,6 +777,30 @@ public class FolderList extends JFrame {
         addDialog.setVisible(true);
     }
 
+
+
+//    private void populateFolders() {
+//        folderPanel.removeAll();
+//        for (Project project : projects) {
+//            JLabel folderLabel = new JLabel(project.getName());
+//            folderLabel.setPreferredSize(new Dimension(150, 100));
+//            folderLabel.setHorizontalAlignment(SwingConstants.CENTER);
+//            folderLabel.setVerticalAlignment(SwingConstants.CENTER);
+//            folderLabel.setOpaque(true);
+//            folderLabel.setBackground(project.getId().equals(selectedProjectId) ? DARK_ORANGE : PRIMARY_COLOR);
+//            folderLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+//            folderLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+//                public void mouseClicked(java.awt.event.MouseEvent evt) {
+//                    selectedProjectId = project.getId();
+//                    populateFolders();  // Refresh folders to update selection
+//                    showTasks(selectedProjectId);
+//                }
+//            });
+//            folderPanel.add(folderLabel);
+//        }
+//        folderPanel.revalidate();
+//        folderPanel.repaint();
+//    }
 
     private void populateFolders() {
         folderPanel.removeAll();
@@ -758,6 +916,17 @@ public class FolderList extends JFrame {
     }
 
 
+    //
+    //
+    //
+    //
+    //
+
+
+
+
+
+
 
     private void showTasks(String projectId) {
         Project selectedProject = projects.stream().filter(p -> p.getId().equals(projectId)).findFirst().orElse(null);
@@ -794,12 +963,49 @@ public class FolderList extends JFrame {
 
         taskTable = new JTable(tableModel);
 
+        // Set table header properties
+        JTableHeader header = taskTable.getTableHeader();
+        header.setPreferredSize(new Dimension(100, 40)); // Set header height
+        header.setDefaultRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                label.setBackground(PRIMARY_COLOR); // Set header background color to black
+                label.setForeground(Color.WHITE); // Set header text color to white
+                label.setHorizontalAlignment(SwingConstants.CENTER); // Center-align header text
+
+                label.setBorder(BorderFactory.createEmptyBorder(10, 5, 10, 5)); // Add padding to header
+                return label;
+            }
+        });
+
+        taskTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                label.setBackground(PRIMARY_COLOR); // Set cell background color to black
+                label.setForeground(Color.WHITE); // Set cell text color to white
+                label.setHorizontalAlignment(SwingConstants.CENTER); // Center-align cell text
+                label.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Add padding to cells
+                return label;
+            }
+        });
+
         // Custom renderer and editor for the Task column
         taskTable.getColumnModel().getColumn(0).setCellRenderer(new TaskCellRenderer());
         taskTable.getColumnModel().getColumn(0).setCellEditor(new TaskCellEditor());
         taskTable.getColumnModel().getColumn(0).setPreferredWidth(300); // Adjust width for Task column if needed
         taskTable.setRowHeight(40); // Set row height to accommodate buttons and label
+        taskTable.getColumnModel().getColumn(0).setPreferredWidth(100); // Set width for the first column
+        taskTable.getColumnModel().getColumn(1).setPreferredWidth(200); // Set width for the second column
 
+
+        // Set table properties
+        taskTable.setBackground(PRIMARY_COLOR); // Set background color for empty areas of the table
+        taskTable.setForeground(Color.WHITE); // Set default text color
+        taskTable.setGridColor(SECONDARY_COLOR); // Set grid line color
+//        taskTable.setSelectionBackground(SEARCH_COLOR); // Set selection background color
+        taskTable.setBorder(BorderFactory.createEmptyBorder());
         // ComboBox for Status column
         JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"To Do", "In Progress", "Completed", "Review"});
         taskTable.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(statusComboBox));
@@ -813,7 +1019,8 @@ public class FolderList extends JFrame {
         }
 
         JScrollPane tableScrollPane = new JScrollPane(taskTable);
-
+        tableScrollPane.setBorder(BorderFactory.createEmptyBorder()); // Remove scroll pane border
+        tableScrollPane.getViewport().setBackground(PRIMARY_COLOR);
         SwingUtilities.invokeLater(() -> {
             taskPanelR.removeAll();
             taskPanelR.add(tableScrollPane, BorderLayout.CENTER);
@@ -821,6 +1028,8 @@ public class FolderList extends JFrame {
             taskPanelR.repaint();
         });
     }
+
+
 //
     //
     //
@@ -849,6 +1058,10 @@ public class FolderList extends JFrame {
             startButton = new JButton();
             stopButton = new JButton();
 
+            // Set the background color to black
+            setBackground(PRIMARY_COLOR);
+            taskLabel.setForeground(Color.WHITE); // Set text color to white for better contrast
+
             // Load icons (adjust paths and sizes as needed)
             ImageIcon startIcon = loadImageIcon("icons/small-start-icon.png", 30, 30);
             ImageIcon stopIcon = loadImageIcon("icons/small-pause-con.png", 30, 30);
@@ -871,6 +1084,10 @@ public class FolderList extends JFrame {
             startButton.setContentAreaFilled(true);
             stopButton.setOpaque(true);
             stopButton.setContentAreaFilled(true);
+
+            // Set button background color
+            startButton.setBackground(PRIMARY_COLOR);
+            stopButton.setBackground(PRIMARY_COLOR);
 
             // Initial state
             stopButton.setEnabled(false);
@@ -914,8 +1131,6 @@ public class FolderList extends JFrame {
             startButton.putClientProperty("task", task);
             stopButton.putClientProperty("task", task);
 
-
-
             return this;
         }
     }
@@ -939,6 +1154,7 @@ public class FolderList extends JFrame {
             return null; // Not used in this context
         }
     }
+
 
     //
     //
