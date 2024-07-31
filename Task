@@ -3,6 +3,7 @@ package org.example;
 import java.time.LocalDate;
 
 public class Task {
+    private String projectId;
     private String id;
     private String name;
     private String description;
@@ -13,7 +14,8 @@ public class Task {
 
 
     // Constructor
-    public Task(String id, String name, String description, String createDate, String status, String timeSpent) {
+    public Task(String projectId,String id, String name, String description, String createDate, String status, String timeSpent) {
+        this.projectId=projectId;
         this.id = id;
         this.name = name;
         this.description = description;

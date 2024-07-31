@@ -31,6 +31,8 @@ public class FolderList extends JFrame {
     private JButton addButton;
     private List<Project> projects;
     private String selectedProjectId;
+    private String selectedTaskId;
+
     private Timer timer;
     private Task currentTask;
     private Project currentProject;
@@ -89,16 +91,25 @@ public class FolderList extends JFrame {
     private long globalStartTime;
     private boolean isGlobalTimerRunning;
     private GlobalEventListener listener;
+    private boolean isDefaultSelectedTaskRunning;
 
-    private static FolderList instance;
-    // Static method to get the singleton instance
-    public static FolderList getInstance() {
-        if (instance == null) {
-            instance = new FolderList();
-        }
-        return instance;
-    }
-    FolderList() {
+
+    //    private static FolderList instance;
+//    // Static method to get the singleton instance
+//    public static FolderList getInstance() {
+//        if (instance == null) {
+//            instance = new FolderList();
+//        }
+//        return instance;
+//    }
+    FolderList(String selectedTaskId, String selectedProjectId,boolean isGlobalTimerRunning,boolean isDefaultSelectedTaskRunning) {
+        this.selectedTaskId = selectedTaskId;
+        this.selectedProjectId = selectedProjectId;
+        this.isGlobalTimerRunning=isGlobalTimerRunning;
+        this.isDefaultSelectedTaskRunning=isDefaultSelectedTaskRunning;
+
+
+
         startGlobalEventListener();
         setTitle("Custom Window");
         setSize(1200, 800);
@@ -136,19 +147,27 @@ public class FolderList extends JFrame {
 
         projects = fetchProjects();
 
-        startGlobalTimer();
+
+        if(isGlobalTimerRunning){
+            startGlobalTimer();
+
+        }
+
 
 
         timer = new Timer();
 
 
 
-        selectedProjectId = projects.isEmpty() ? null : projects.get(0).getId();  // Select the first project if available
         populateFolders();
-        if (selectedProjectId != null) {
+        if (selectedProjectId != null ) {
             showTasks(selectedProjectId);
         }
 
+
+        if (isDefaultSelectedTaskRunning) {
+            startTimer(currentTask);
+        }
         // Task Panel
 
         centerPanel.add(createTaskPanel());
@@ -344,7 +363,7 @@ public class FolderList extends JFrame {
 
 
         addProjectButton.addActionListener(e -> {
-showAddProjectDialog();
+            showAddProjectDialog();
         });
 
         addProjectButton.setBackground(WARNING_COLOR);
@@ -574,7 +593,22 @@ showAddProjectDialog();
                         tasks
                 );
                 projectList.add(project);
+
+                // Check if this is the selected project
+                if (project.getId().equals(selectedProjectId)) {
+
+                    // Check if we need to find the selected task
+                    if (selectedTaskId != null) {
+                        for (Task task : project.getTasks()) {
+                            if (task.getId().equals(selectedTaskId)) {
+                                currentTask = task;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -594,9 +628,10 @@ showAddProjectDialog();
                 String taskCreateDate = taskObject.optString("createDate", "2024-07-25");
                 String taskStatus = taskObject.optString("status", "Open");
                 String taskDuration = taskObject.optString("duration", "00:00:00");
+                String projectId = taskObject.optString("id", UUID.randomUUID().toString());
 
                 // Create new Task object with extracted values
-                Task newTask = new Task(taskId, taskName, taskDescription, taskCreateDate, taskStatus, taskDuration);
+                Task newTask = new Task(projectId,taskId, taskName, taskDescription, taskCreateDate, taskStatus, taskDuration);
 
                 // Add the new Task to the list
                 tasks.add(newTask);
@@ -1175,59 +1210,81 @@ showAddProjectDialog();
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     private void showAddTaskDialog(Project project) {
-        JDialog addDialog = new JDialog(this, "Add New Task", true);
-        addDialog.setSize(300, 150);
-        addDialog.setLayout(new GridLayout(2, 1));
+        AddTaskModal dialog = new AddTaskModal(this, project.getId());
+        dialog.setVisible(true);
 
-        JTextField nameField = new JTextField();
-        JButton addTaskButton = new JButton("Add Task");
-        addTaskButton.setBackground(ADD_PROJECT_COLOR);
+        // Debug statement to check the status
+        String status = dialog.getStatus();
+        System.out.println("Debug: Status returned from AddTaskModal: " + status);
 
+        // Check if the task was successfully added
+        if ("Success".equals(status)) {
+            Task newTask = dialog.getCreatedTask();
 
-        addDialog.add(new JLabel("Task Name:"));
-        addDialog.add(nameField);
+            // Debug statement to check the created task
+            System.out.println("Debug: Created Task: " + newTask);
 
-        addTaskButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String taskName = nameField.getText().trim();
-                if (!taskName.isEmpty()) {
-                    // Assuming default values for the new fields
-                    String taskId = UUID.randomUUID().toString();
-                    String taskName2 = "New Task"; // Replace with actual task name input
-                    String taskDescription = "Description of the new task"; // Replace with actual description input
-                    String taskCreateDate = "2024-07-25"; // Current date or another date input
-                    String taskStatus = "Open"; // Default status or another status input
-                    String taskDuration = "00:00:00"; // Default duration
-
-                    Task newTask = new Task(taskId, taskName2, taskDescription, taskCreateDate, taskStatus, taskDuration);
-
-                    project.getTasks().add(newTask);
-                    showTasks(project.getId());
-                    addDialog.dispose();
-                } else {
-                    JOptionPane.showMessageDialog(addDialog, "Task name cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
-                }
+            if (newTask != null) {
+                project.getTasks().add(newTask);
+                showTasks(project.getId());
             }
-        });
-        addDialog.add(addTaskButton);
-
-        addDialog.setLocationRelativeTo(this);
-        addDialog.setVisible(true);
+        }
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+//    private void showAddTaskDialog(Project project) {
+//        JDialog addDialog = new JDialog(this, "Add New Task", true);
+//        addDialog.setSize(300, 150);
+//        addDialog.setLayout(new GridLayout(2, 1));
+//
+//        JTextField nameField = new JTextField();
+//        JButton addTaskButton = new JButton("Add Task");
+//        addTaskButton.setBackground(ADD_PROJECT_COLOR);
+//
+//
+//        addDialog.add(new JLabel("Task Name:"));
+//        addDialog.add(nameField);
+//
+//        addTaskButton.addActionListener(new ActionListener() {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                String taskName = nameField.getText().trim();
+//                if (!taskName.isEmpty()) {
+//                    // Assuming default values for the new fields
+//                    String taskId = UUID.randomUUID().toString();
+//                    String taskName2 = "New Task"; // Replace with actual task name input
+//                    String taskDescription = "Description of the new task"; // Replace with actual description input
+//                    String taskCreateDate = "2024-07-25"; // Current date or another date input
+//                    String taskStatus = "Open"; // Default status or another status input
+//                    String taskDuration = "00:00:00"; // Default duration
+//
+//                    Task newTask = new Task(taskId, taskName2, taskDescription, taskCreateDate, taskStatus, taskDuration);
+//
+//                    project.getTasks().add(newTask);
+//                    showTasks(project.getId());
+//                    addDialog.dispose();
+//                } else {
+//                    JOptionPane.showMessageDialog(addDialog, "Task name cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+//                }
+//            }
+//        });
+//        addDialog.add(addTaskButton);
+//
+//        addDialog.setLocationRelativeTo(this);
+//        addDialog.setVisible(true);
+//    }
 
     private void startTimer(Task task) {
         System.out.println("Start timer: " + task.getName());
@@ -1306,9 +1363,11 @@ showAddProjectDialog();
 
 
     private void startGlobalTimer() {
-        if (isGlobalTimerRunning) {
-            return;
-        }
+//        if (isGlobalTimerRunning) {
+//            return;
+//        }
+
+
         startIdleTracking();
         globalStartTime = System.currentTimeMillis() - elapsedTimeBeforeStop;;
         globalTimer = new Timer();
@@ -1431,11 +1490,11 @@ showAddProjectDialog();
 //        currentTaskPanel.setBounds(20, 10, frameWidth - 180, 80);
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                new FolderList();
-            }
-        });
-    }
+//    public static void main(String[] args) {
+//        SwingUtilities.invokeLater(new Runnable() {
+//            public void run() {
+//                new FolderList();
+//            }
+//        });
+//    }
 }
