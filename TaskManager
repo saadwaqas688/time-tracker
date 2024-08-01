@@ -4,7 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.*;
+import java.sql.*;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,7 +12,7 @@ import java.util.Map;
 public class TaskManager extends JFrame {
 
     private static final int UPDATE_INTERVAL_MS = 1000; // 1 second
-    private static final String FILE_PATH = "user-activity.txt";
+    private static final String DB_URL = "jdbc:sqlite:tasks.db";
 
     private final Map<Integer, TaskData> tasks = new HashMap<>();
     private Integer currentRunningTaskId = null;
@@ -51,14 +51,16 @@ public class TaskManager extends JFrame {
         task3StartButton.addActionListener(new TaskActionListener(3, true));
         task3StopButton.addActionListener(new TaskActionListener(3, false));
 
-        // Load tasks from file and adjust running tasks
-        loadTasksFromFile();
+        // Initialize the database
+        initializeDatabase();
+
+        // Load tasks from the database
+        loadTasksFromDatabase();
 
         Timer updateTimer = new Timer(UPDATE_INTERVAL_MS, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 updateTasks();
-                writeToFile();
                 updateLabels();
             }
         });
@@ -88,7 +90,7 @@ public class TaskManager extends JFrame {
 
         @Override
         public void actionPerformed(ActionEvent e) {
-            long currentTime = Instant.now().toEpochMilli();
+            long currentTime = Instant.now().getEpochSecond();
 
             if (start) {
                 if (currentRunningTaskId != null && !currentRunningTaskId.equals(taskId)) {
@@ -106,8 +108,8 @@ public class TaskManager extends JFrame {
                 tasks.put(taskId, existingTaskData);
                 currentRunningTaskId = taskId;
 
-                // Write immediately to file
-                writeToFile();
+                // Write immediately to database
+                insertOrUpdateTask(taskId, currentTime, true, existingTaskData.timeSpent);
 
                 System.out.println("Started: Task " + taskId);
             } else {
@@ -124,42 +126,26 @@ public class TaskManager extends JFrame {
         TaskData taskData = tasks.get(taskId);
         if (taskData != null && taskData.isRunning) {
             taskData.isRunning = false;
-            taskData.timeSpent += (currentTime - taskData.timeStamp) / 1000; // convert ms to s
+            taskData.timeSpent += (currentTime - taskData.timeStamp); // update timeSpent in seconds
             taskData.timeStamp = currentTime;
             tasks.put(taskId, taskData);
+            insertOrUpdateTask(taskId, taskData.timeStamp, false, taskData.timeSpent); // Update in database
             System.out.println("Stopped: Task " + taskId + " - Total Time: " + taskData.timeSpent + " s");
             currentRunningTaskId = null;
         }
     }
 
     private void updateTasks() {
-        long currentTime = Instant.now().toEpochMilli();
+        long currentTime = Instant.now().getEpochSecond();
         for (Map.Entry<Integer, TaskData> entry : tasks.entrySet()) {
             TaskData taskData = entry.getValue();
             if (taskData.isRunning) {
-                taskData.timeSpent += (currentTime - taskData.timeStamp) / 1000; // convert ms to s
-                taskData.timeStamp = currentTime;
+                taskData.timeSpent += (currentTime - taskData.timeStamp); // Update timeSpent in seconds
+                taskData.timeStamp = currentTime; // Update timeStamp to current time
+                insertOrUpdateTask(entry.getKey(), taskData.timeStamp, true, taskData.timeSpent); // Update in database
             }
         }
     }
-
-    private void writeToFile() {
-        System.out.println("Writing to file...");
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH, false))) { // 'false' to overwrite the file
-            for (Map.Entry<Integer, TaskData> entry : tasks.entrySet()) {
-                int taskId = entry.getKey();
-                TaskData taskData = entry.getValue();
-                writer.write(taskId + ": {timeStamp:" + taskData.timeStamp + ", isRunning:" + taskData.isRunning +
-                        ", timeSpent:" + taskData.timeSpent + " s}\n");
-            }
-            writer.flush();
-            System.out.println("Data written to file.");
-        } catch (IOException e) {
-            System.err.println("Error writing to file: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
 
     private void updateLabels() {
         task1Label.setText("Task 1: " + tasks.getOrDefault(1, new TaskData(0, false, 0)).timeSpent + " s");
@@ -167,70 +153,64 @@ public class TaskManager extends JFrame {
         task3Label.setText("Task 3: " + tasks.getOrDefault(3, new TaskData(0, false, 0)).timeSpent + " s");
     }
 
+    private void initializeDatabase() {
+        try {
+            Class.forName("org.sqlite.JDBC"); // Load the SQLite JDBC driver
+            try (Connection conn = DriverManager.getConnection(DB_URL)) {
+                if (conn != null) {
+                    try (Statement stmt = conn.createStatement()) {
+                        String sql = "CREATE TABLE IF NOT EXISTS tasks (" +
+                                "id INTEGER PRIMARY KEY," +
+                                "timeStamp INTEGER," +
+                                "isRunning INTEGER," +
+                                "timeSpent INTEGER" +
+                                ")";
+                        stmt.execute(sql);
+                        System.out.println("Database and tasks table initialized.");
+                    }
+                }
+            }
+        } catch (ClassNotFoundException | SQLException e) {
+            System.err.println("Error initializing database: " + e.getMessage());
+        }
+    }
 
-    private void loadTasksFromFile() {
-        System.out.println("Loading tasks from file...");
+    private void insertOrUpdateTask(int taskId, long timeStamp, boolean isRunning, long timeSpent) {
+        String sql = "INSERT OR REPLACE INTO tasks (id, timeStamp, isRunning, timeSpent) VALUES (?, ?, ?, ?)";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, taskId);
+            pstmt.setLong(2, timeStamp); // Use setLong for INTEGER
+            pstmt.setInt(3, isRunning ? 1 : 0); // Use 1 for true, 0 for false
+            pstmt.setLong(4, timeSpent);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Error inserting/updating task: " + e.getMessage());
+        }
+    }
+
+    private void loadTasksFromDatabase() {
+        System.out.println("Loading tasks from database...");
         tasks.clear(); // Clear current tasks to avoid stale data
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                // Debugging output to see the raw line read
-                System.out.println("Raw line from file: " + line);
+        String sql = "SELECT * FROM tasks";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
 
-                // Split the line into task ID and data part
-                String[] parts = line.split(": \\{");
-                if (parts.length < 2) {
-                    System.err.println("Skipping malformed line: " + line);
-                    continue;
-                }
-
-                // Extract task ID
-                int taskId = Integer.parseInt(parts[0].trim());
-
-                // Extract task data part and remove ending curly brace
-                String taskDataStr = parts[1].trim().replace("}", "").trim();
-                String[] data = taskDataStr.split(", ");
-
-                long timeStamp = 0;
-                boolean isRunning = false;
-                long timeSpent = 0;
-
-                for (String item : data) {
-                    // Split item into key and value
-                    String[] keyValue = item.split(":");
-                    if (keyValue.length < 2) {
-                        System.err.println("Skipping malformed data item: " + item);
-                        continue;
-                    }
-
-                    String key = keyValue[0].trim();
-                    String value = keyValue[1].trim();
-
-                    switch (key) {
-                        case "timeStamp":
-                            timeStamp = Long.parseLong(value);
-                            break;
-                        case "isRunning":
-                            isRunning = Boolean.parseBoolean(value);
-                            break;
-                        case "timeSpent":
-                            timeSpent = Long.parseLong(value.replace(" s", ""));
-                            break;
-                        default:
-                            System.err.println("Unknown key: " + key);
-                            break;
-                    }
-                }
+            while (rs.next()) {
+                int taskId = rs.getInt("id");
+                long timeStamp = rs.getLong("timeStamp"); // Retrieve timestamp in seconds
+                boolean isRunning = rs.getInt("isRunning") == 1;
+                long timeSpent = rs.getLong("timeSpent");
 
                 TaskData taskData = new TaskData(timeStamp, isRunning, timeSpent);
 
                 // If the task is running, update timeSpent and timeStamp
                 if (isRunning) {
-                    long currentTime = Instant.now().toEpochMilli();
-//                    taskData.timeSpent += (currentTime - timeStamp) / 1000; // convert ms to s
+                    long currentTime = Instant.now().getEpochSecond();
+//                    taskData.timeSpent += (currentTime - timeStamp); // Adjust timeSpent in seconds
                     taskData.timeStamp = currentTime; // Update timeStamp to current time
-                    // Set currentRunningTaskId to the task that was running
                     currentRunningTaskId = taskId;
                 }
 
@@ -242,14 +222,11 @@ public class TaskManager extends JFrame {
                 System.out.println("  Is Running: " + taskData.isRunning);
                 System.out.println("  Time Spent: " + taskData.timeSpent + " s");
             }
-            System.out.println("Tasks loaded from file.");
-        } catch (IOException e) {
-            System.err.println("Error reading from file: " + e.getMessage());
-            e.printStackTrace();
+            System.out.println("Tasks loaded from database.");
+        } catch (SQLException e) {
+            System.err.println("Error loading tasks from database: " + e.getMessage());
         }
     }
-
-
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
