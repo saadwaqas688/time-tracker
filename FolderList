@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.sql.*;
 import java.util.*;
 import java.util.List;
 import java.util.Timer;
@@ -15,6 +16,10 @@ import org.json.JSONObject;
 import org.jnativehook.GlobalScreen;
 import org.jnativehook.NativeHookException;
 import java.io.IOException;
+import java.util.Timer;
+import java.util.TimerTask;
+import javax.swing.SwingUtilities;
+import javax.swing.table.DefaultTableModel;
 
 import java.awt.Toolkit;
 
@@ -32,6 +37,10 @@ public class FolderList extends JFrame {
     private List<Project> projects;
     private String selectedProjectId;
     private String selectedTaskId;
+    private long lastDatabaseUpdate = 0; // Field to track the last database update time
+    private static final long UPDATE_INTERVAL_MS = 10000;
+    private static final String DB_URL = "jdbc:sqlite:current-tasks.db";
+
 
     private Timer timer;
     private Task currentTask;
@@ -164,10 +173,6 @@ public class FolderList extends JFrame {
             showTasks(selectedProjectId);
         }
 
-
-        if (isDefaultSelectedTaskRunning) {
-            startTimer(currentTask);
-        }
         // Task Panel
 
         centerPanel.add(createTaskPanel());
@@ -184,6 +189,10 @@ public class FolderList extends JFrame {
                 onWindowResize();
             }
         });
+
+        if (isDefaultSelectedTaskRunning) {
+            startTimer(currentTask);
+        }
     }
 
     private JPanel createCenterPanel() {
@@ -1287,6 +1296,7 @@ public class FolderList extends JFrame {
 //    }
 
     private void startTimer(Task task) {
+        initializeOrUpdateDatabase();
         System.out.println("Start timer: " + task.getName());
 
         stopTimer();  // Stop any existing timer
@@ -1307,6 +1317,7 @@ public class FolderList extends JFrame {
                 break;
             }
         }
+        lastDatabaseUpdate = System.currentTimeMillis(); // Initialize the last update time
 
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
@@ -1357,9 +1368,142 @@ public class FolderList extends JFrame {
                     taskTable.repaint();
                 });
             }
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - lastDatabaseUpdate >= UPDATE_INTERVAL_MS) {
+                try {
+                    initializeOrUpdateDatabase();
+                } catch (Exception e) {
+                    System.err.println("Error updating database: " + e.getMessage());
+                }
+                lastDatabaseUpdate = currentTime;
+            }
         }
     }
 
+    private int convertTimeStringToSeconds(String timeString) {
+        try {
+            String[] parts = timeString.split(":");
+            if (parts.length != 3) {
+                throw new IllegalArgumentException("Invalid time format. Expected HH:MM:SS.");
+            }
+
+            int hours = Integer.parseInt(parts[0]);
+            int minutes = Integer.parseInt(parts[1]);
+            int seconds = Integer.parseInt(parts[2]);
+
+            return hours * 3600 + minutes * 60 + seconds;
+        } catch (NumberFormatException e) {
+            System.err.println("Error converting time string to seconds: Invalid number format.");
+            return 0; // Default to 0 if there is a number format error
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error converting time string to seconds: " + e.getMessage());
+            return 0; // Default to 0 if there is an illegal argument
+        }
+    }
+
+
+
+    private void initializeOrUpdateDatabase() {
+        try {
+            Class.forName("org.sqlite.JDBC"); // Load the SQLite JDBC driver
+            try (Connection conn = DriverManager.getConnection(DB_URL)) {
+                if (conn != null) {
+                    try (Statement stmt = conn.createStatement()) {
+                        // Create the tasks table if it does not exist
+                        String createTableSQL = "CREATE TABLE IF NOT EXISTS tasks (" +
+                                "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                                "timeStamp INTEGER," +
+                                "isRunning INTEGER," +
+                                "timeSpent INTEGER)";
+                        stmt.execute(createTableSQL);
+                        System.out.println("Database and tasks table initialized.");
+
+                        if (currentTask != null) {
+                            // Ensure currentTask is initialized and has an ID
+                            String taskIdString = currentTask.getId();
+                            int taskId;
+                            try {
+                                taskId = Integer.parseInt(taskIdString);
+                            } catch (NumberFormatException e) {
+                                System.err.println("Error converting task ID to integer: " + e.getMessage());
+                                return; // Exit the method if the ID is invalid
+                            }
+
+                            // Set all tasks to not running
+                            String updateAllTasksSQL = "UPDATE tasks SET isRunning = 0 WHERE isRunning = 1";
+                            try (PreparedStatement pstmt = conn.prepareStatement(updateAllTasksSQL)) {
+                                pstmt.executeUpdate();
+                            }
+
+                            // Check if the task already exists in the database
+                            String checkTaskSQL = "SELECT COUNT(*) FROM tasks WHERE id = ?";
+                            try (PreparedStatement checkPstmt = conn.prepareStatement(checkTaskSQL)) {
+                                checkPstmt.setInt(1, taskId);
+                                try (ResultSet rs = checkPstmt.executeQuery()) {
+                                    if (rs.next() && rs.getInt(1) > 0) {
+                                        // Task exists, update the record
+                                        updateTaskRecord(conn, taskId);
+                                    } else {
+                                        // Task does not exist, insert a new record
+                                        insertTaskRecord(conn, taskId);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (ClassNotFoundException | SQLException e) {
+            System.err.println("Error initializing or updating database: " + e.getMessage());
+        }
+    }
+
+    private void updateTaskRecord(Connection conn, int taskId) {
+        try {
+            String sql = "UPDATE tasks SET timeStamp = ?, isRunning = ?, timeSpent = ? WHERE id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                long currentTimeStamp = System.currentTimeMillis() / 1000; // timestamp in seconds
+                int timeSpent = convertTimeStringToSeconds(currentTask.getTimeSpent());
+
+                pstmt.setLong(1, currentTimeStamp);
+                pstmt.setInt(2, currentTask.isRunning() ? 1 : 0);
+                pstmt.setInt(3, timeSpent);
+                pstmt.setInt(4, taskId); // Set the task ID to identify the record to update
+
+                int rowsAffected = pstmt.executeUpdate();
+                if (rowsAffected > 0) {
+                    System.out.println("Database updated successfully.");
+                } else {
+                    System.out.println("No rows updated in the database. Check if the task ID exists.");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error updating task record: " + e.getMessage());
+        }
+    }
+
+    private void insertTaskRecord(Connection conn, int taskId) {
+        try {
+            String sql = "INSERT INTO tasks (id, timeStamp, isRunning, timeSpent) VALUES (?, ?, ?, ?)";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                long currentTimeStamp = System.currentTimeMillis() / 1000; // timestamp in seconds
+
+                pstmt.setInt(1, taskId); // Set task ID
+                pstmt.setLong(2, currentTimeStamp); // Set current timestamp
+                pstmt.setInt(3, currentTask.isRunning() ? 1 : 0); // Set running status
+                pstmt.setInt(4, 0); // Set timeSpent to 0
+
+                int rowsAffected = pstmt.executeUpdate();
+                if (rowsAffected > 0) {
+                    System.out.println("Task record initialized in the database.");
+                } else {
+                    System.out.println("No rows inserted into the database.");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error inserting task record: " + e.getMessage());
+        }
+    }
 
 
     private void startGlobalTimer() {
