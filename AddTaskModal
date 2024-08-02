@@ -187,7 +187,7 @@ public class AddTaskModal extends JDialog {
             String description = json.optString("description", null);
             String createDate = json.optString("createDate", null);
             String status = json.optString("status", null);
-            String timeSpent = json.optString("timeSpent", "00:00:00"); // Default value if missing
+            int timeSpent = json.optInt("timeSpent", 0); // Default value if missing
 
             if (projectId == null || id == null || name == null || description == null || createDate == null || status == null) {
                 throw new IllegalArgumentException("Missing required fields in JSON");
