@@ -38,8 +38,10 @@ public class FolderList extends JFrame {
     private String selectedProjectId;
     private String selectedTaskId;
     private long lastDatabaseUpdate = 0; // Field to track the last database update time
+    private long lastDatabaseUpdateForGlobalTimer = 0; // Field to track the last database update time
+
     private static final long UPDATE_INTERVAL_MS = 10000;
-    private static final String DB_URL = "jdbc:sqlite:current.db";
+    private static final String DB_URL = "jdbc:sqlite:app.db";
 
 
     private Timer timer;
@@ -101,6 +103,8 @@ public class FolderList extends JFrame {
     private boolean isGlobalTimerRunning;
     private GlobalEventListener listener;
     private boolean isDefaultSelectedTaskRunning;
+    private User user;
+
 
 
     //    private static FolderList instance;
@@ -111,9 +115,9 @@ public class FolderList extends JFrame {
 //        }
 //        return instance;
 //    }
-    FolderList() {
+    FolderList(User user) {
 
-
+        this.user = user;
 
 
         startGlobalEventListener();
@@ -155,6 +159,8 @@ public class FolderList extends JFrame {
 
 
         if(isGlobalTimerRunning){
+            elapsedTimeBeforeStop = user.getGlobalTimer() * 1000L;
+
             startGlobalTimer();
 
         }
@@ -187,9 +193,10 @@ public class FolderList extends JFrame {
             }
         });
 
-        if (isDefaultSelectedTaskRunning) {
+        if (currentTask != null) {
             startTimer(currentTask);
         }
+
     }
 
     private JPanel createCenterPanel() {
@@ -639,6 +646,7 @@ public class FolderList extends JFrame {
                         );
 
                         if (isRunning) {
+                            System.out.println("task is running: " + taskId);
                             runningTask = task; // Update the running task
                             selectedProject = project; // Update the project of the running task
                         }
@@ -1628,6 +1636,22 @@ public class FolderList extends JFrame {
     }
 
 
+
+    private void updateGlobalTimerInDatabase(long totalSeconds) {
+        String sql = "UPDATE users SET global_timer = ? WHERE id = ?";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, totalSeconds);
+            pstmt.setInt(2, 1); // replace userId with the actual user ID
+            pstmt.executeUpdate();
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
     private void startGlobalTimer() {
 //        if (isGlobalTimerRunning) {
 //            return;
@@ -1644,6 +1668,7 @@ public class FolderList extends JFrame {
             }
         }, 1000, 1000);
         isGlobalTimerRunning = true;
+        lastDatabaseUpdateForGlobalTimer = System.currentTimeMillis();
         if (startIconGlobalTimer != null) {
             startIconGlobalTimer.setVisible(false);
         }
@@ -1745,6 +1770,19 @@ public class FolderList extends JFrame {
         int minutes = (int) (elapsedTime / 60000) % 60;
         int hours = (int) (elapsedTime / 3600000);
         globalTimerLabel.setText(String.format("%02d:%02d:%02d", hours, minutes, seconds));
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastDatabaseUpdateForGlobalTimer >= UPDATE_INTERVAL_MS) {
+            try {
+                long totalSeconds = elapsedTime / 1000;
+                updateGlobalTimerInDatabase(totalSeconds);
+                user.setGlobalTimer((int) totalSeconds);
+
+            } catch (Exception e) {
+                System.err.println("Error updating database: " + e.getMessage());
+            }
+            lastDatabaseUpdateForGlobalTimer = currentTime;
+        }
     }
 
 
