@@ -6,6 +6,10 @@ import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 
 public class AddTaskModal extends JDialog {
     private static final Color SECONDARY_COLOR = new Color(0, 36, 51);
@@ -16,14 +20,18 @@ public class AddTaskModal extends JDialog {
     private JTextField taskNameField;
     private JTextArea descriptionArea;
     private JComboBox<String> statusDropdown;
+    private int projectId;
 
-    private String projectId;
+    private int userId;
     private String status;
     private Task createdTask;
+    private static final String DB_URL = "jdbc:sqlite:app.db";
 
-    public AddTaskModal(Frame owner, String projectId) {
+
+    public AddTaskModal(Frame owner, int projectId,int userId) {
         super(owner, "Add New Task", true);
         this.projectId = projectId;
+        this.userId = userId;
         this.status = "Failed";
         this.createdTask = null;
 
@@ -138,50 +146,123 @@ public class AddTaskModal extends JDialog {
     }
 
     // Handle the Add button click
+//    private void handleAddButtonClick() {
+//        String taskName = taskNameField.getText().trim();
+//        String description = descriptionArea.getText().trim();
+//        String status = (String) statusDropdown.getSelectedItem();
+//
+//        if (taskName.isEmpty() || "Select".equals(status)) {
+//            JOptionPane.showMessageDialog(this, "Please fill out all fields correctly.", "Error", JOptionPane.ERROR_MESSAGE);
+//            return;
+//        }
+//
+//        // Construct the JSON payload
+//        String jsonPayload = String.format("{\"projectId\":\"%s\", \"name\":\"%s\", \"description\":\"%s\", \"status\":\"%s\"}",
+//                projectId, taskName, description, status);
+//
+//        // Send the POST request
+//        String apiUrl = "http://localhost:3000/addTask";
+//        JSONObject response = HttpUtil.sendPostRequest(apiUrl, jsonPayload);
+//
+//        // Handle the response to extract the created task
+//        Task newTask = null;
+//        if (response != null && response.has("success") && response.getBoolean("success")) {
+//            try {
+//                if (response.has("task")) {
+//                    JSONObject taskJson = response.getJSONObject("task");
+//                    newTask = parseTaskFromJson(taskJson);
+//                    this.status = "Success";
+//                    createdTask = newTask;
+//                    JOptionPane.showMessageDialog(this, "Task added successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+//                    dispose();
+//                }
+//            } catch (Exception e) {
+//                this.status = "Failed";
+//                JOptionPane.showMessageDialog(this, "Failed to parse task from response.", "Error", JOptionPane.ERROR_MESSAGE);
+//            }
+//        } else {
+//            this.status = "Failed";
+//            JOptionPane.showMessageDialog(this, "Failed to add task.", "Error", JOptionPane.ERROR_MESSAGE);
+//        }
+//    }
+
     private void handleAddButtonClick() {
         String taskName = taskNameField.getText().trim();
         String description = descriptionArea.getText().trim();
         String status = (String) statusDropdown.getSelectedItem();
+        int userId = 1; // Assuming userId is 1 as per your requirement
 
         if (taskName.isEmpty() || "Select".equals(status)) {
             JOptionPane.showMessageDialog(this, "Please fill out all fields correctly.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Construct the JSON payload
-        String jsonPayload = String.format("{\"projectId\":\"%s\", \"name\":\"%s\", \"description\":\"%s\", \"status\":\"%s\"}",
-                projectId, taskName, description, status);
+        try (Connection conn = DriverManager.getConnection(DB_URL)) {
+            conn.setAutoCommit(false);
 
-        // Send the POST request
-        String apiUrl = "http://localhost:3000/addTask";
-        JSONObject response = HttpUtil.sendPostRequest(apiUrl, jsonPayload);
+            LocalDate currentDate = LocalDate.now();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            String formattedDate = currentDate.format(formatter);
 
-        // Handle the response to extract the created task
-        Task newTask = null;
-        if (response != null && response.has("success") && response.getBoolean("success")) {
-            try {
-                if (response.has("task")) {
-                    JSONObject taskJson = response.getJSONObject("task");
-                    newTask = parseTaskFromJson(taskJson);
-                    this.status = "Success";
-                    createdTask = newTask;
-                    JOptionPane.showMessageDialog(this, "Task added successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                    dispose();
+            String insertTaskSQL = "INSERT INTO tasks (projectId, name, description, createDate, status, timeStamp, isRunning, timeSpent) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, 0, 0)";
+            try (PreparedStatement pstmt = conn.prepareStatement(insertTaskSQL, Statement.RETURN_GENERATED_KEYS)) {
+                pstmt.setInt(1, projectId);
+                pstmt.setString(2, taskName);
+                pstmt.setString(3, description);
+                pstmt.setString(4, formattedDate); // createDate
+                pstmt.setString(5, status);
+                pstmt.setString(6, formattedDate); // timeStamp
+
+                int affectedRows = pstmt.executeUpdate();
+                if (affectedRows == 0) {
+                    throw new SQLException("Creating task failed, no rows affected.");
                 }
-            } catch (Exception e) {
-                this.status = "Failed";
-                JOptionPane.showMessageDialog(this, "Failed to parse task from response.", "Error", JOptionPane.ERROR_MESSAGE);
+
+                try (var generatedKeys = pstmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        long taskId = generatedKeys.getLong(1);
+
+                        String insertUserTaskSQL = "INSERT INTO user_tasks (userId, taskId) VALUES (?, ?)";
+                        try (PreparedStatement pstmtUserTask = conn.prepareStatement(insertUserTaskSQL)) {
+                            pstmtUserTask.setInt(1, userId);
+                            pstmtUserTask.setLong(2, taskId);
+                            pstmtUserTask.executeUpdate();
+                        }
+                        this.status = "Success";
+                        Task newTask = new Task(
+                                projectId,
+                                String.valueOf(taskId),
+                                taskName,
+                                description,
+                                formattedDate,
+                                status,
+                                0
+                        );
+
+                        createdTask = newTask;
+                    } else {
+                        throw new SQLException("Creating task failed, no ID obtained.");
+                    }
+                }
+
+                conn.commit();
+             JOptionPane.showMessageDialog(this, "Task added successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                dispose();
+            } catch (SQLException ex) {
+                conn.rollback();
+                throw ex;
             }
-        } else {
+        } catch (SQLException e) {
             this.status = "Failed";
-            JOptionPane.showMessageDialog(this, "Failed to add task.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Failed to add task: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     // Parse task from JSON response
     private Task parseTaskFromJson(JSONObject json) {
         try {
-            String projectId = json.optString("projectId", null);
+            int projectId = json.optInt("projectId", 0);
             String id = json.optString("id", null);
             String name = json.optString("name", null);
             String description = json.optString("description", null);
@@ -189,7 +270,7 @@ public class AddTaskModal extends JDialog {
             String status = json.optString("status", null);
             int timeSpent = json.optInt("timeSpent", 0); // Default value if missing
 
-            if (projectId == null || id == null || name == null || description == null || createDate == null || status == null) {
+            if (projectId == 0 || id == null || name == null || description == null || createDate == null || status == null) {
                 throw new IllegalArgumentException("Missing required fields in JSON");
             }
 
@@ -210,7 +291,7 @@ public class AddTaskModal extends JDialog {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            AddTaskModal dialog = new AddTaskModal(null, "project-id-example");
+            AddTaskModal dialog = new AddTaskModal(null, 3,3);
             dialog.setVisible(true);
         });
     }

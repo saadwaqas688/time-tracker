@@ -35,7 +35,7 @@ public class FolderList extends JFrame {
     private JScrollPane taskScrollPane;
     private JButton addButton;
     private List<Project> projects;
-    private String selectedProjectId;
+    private int selectedProjectId;
     private String selectedTaskId;
     private long lastDatabaseUpdate = 0; // Field to track the last database update time
     private long lastDatabaseUpdateForGlobalTimer = 0; // Field to track the last database update time
@@ -46,7 +46,6 @@ public class FolderList extends JFrame {
 
     private Timer timer;
     private Task currentTask;
-    private Project currentProject;
     private JLabel startIconGlobalTimer;
     private JLabel stopIconGlobalTimer;
 
@@ -156,14 +155,18 @@ public class FolderList extends JFrame {
 
 
         projects = fetchProjects();
-
-
-        if(isGlobalTimerRunning){
             elapsedTimeBeforeStop = user.getGlobalTimer() * 1000L;
 
             startGlobalTimer();
 
-        }
+        
+
+//        if(isGlobalTimerRunning){
+//            elapsedTimeBeforeStop = user.getGlobalTimer() * 1000L;
+//
+//            startGlobalTimer();
+//
+//        }
 
 
 
@@ -172,7 +175,7 @@ public class FolderList extends JFrame {
 
 
         populateFolders();
-        if (selectedProjectId != null ) {
+        if (selectedProjectId != -1 ) {
             showTasks(selectedProjectId);
         }
 
@@ -217,7 +220,7 @@ public class FolderList extends JFrame {
 
     private JPanel createTimerPanel() {
         JPanel timerPanel = new JPanel();
-        timerPanel.setPreferredSize(new Dimension(getWidth(), 48)); // Fixed height of 48 pixels
+        timerPanel.setPreferredSize(new Dimension(getWidth(), 60)); // Fixed height of 48 pixels
         timerPanel.setBackground(SECONDARY_COLOR);
         timerPanel.setLayout(new BorderLayout());
         timerPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
@@ -567,7 +570,7 @@ public class FolderList extends JFrame {
 
 
         addTaskButton.addActionListener(e -> {
-            showAddTaskDialog(currentProject);
+            showAddTaskDialog();
 
         });
 
@@ -583,7 +586,7 @@ public class FolderList extends JFrame {
 //data from local tables
     private List<Project> fetchProjects() {
         List<Project> projectList = new ArrayList<>();
-        String sql = "SELECT p.id AS projectId, p.name AS projectName, t.id AS taskId, " +
+        String sql = "SELECT p.id AS projectId, p.name AS projectName, p.description AS projectDescription, t.id AS taskId, " +
                 "t.name AS taskName, t.description AS taskDescription, t.createDate AS taskCreateDate, " +
                 "t.status AS taskStatus, t.timeSpent AS timeSpent,t.isRunning  " +
                 "FROM projects p " +
@@ -612,8 +615,9 @@ public class FolderList extends JFrame {
                 Project selectedProject = null;
 
                 while (rs.next()) {
-                    String projectId = rs.getString("projectId");
+                    int projectId = rs.getInt("projectId");
                     String projectName = rs.getString("projectName");
+                    String projectDescription= rs.getString("projectDescription");
                     String taskId = rs.getString("taskId");
                     String taskName = rs.getString("taskName");
                     String taskDescription = rs.getString("taskDescription");
@@ -632,7 +636,7 @@ public class FolderList extends JFrame {
                     System.out.println("Task Status: " + taskStatus);
                     System.out.println("Task Duration: " + timeSpent);
 
-                    Project project = projectMap.computeIfAbsent(projectId, k -> createProject(rs));
+                    Project project = projectMap.computeIfAbsent(String.valueOf(projectId), k -> createProject(rs));
 
                     if (project != null) {
                         Task task = new Task(
@@ -693,12 +697,15 @@ public class FolderList extends JFrame {
 
     private Project createProject(ResultSet rs) {
         try {
-            String projectId = rs.getString("projectId");
+            int projectId = rs.getInt("projectId");
             String projectName = rs.getString("projectName");
+            String projectDescription = rs.getString("projectDescription");
+
             System.out.println("Creating new project: " + projectId + " - " + projectName);
             return new Project(
                     projectId,
                     projectName,
+                    projectDescription,
                     new ArrayList<>()
             );
         } catch (SQLException e) {
@@ -928,16 +935,21 @@ public class FolderList extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 String projectName = nameField.getText().trim();
                 if (!projectName.isEmpty()) {
-                    Project newProject = new Project(UUID.randomUUID().toString(), projectName, new ArrayList<>());
-                    projects.add(newProject);
-                    populateFolders();
-                    selectedProjectId = newProject.getId();
-                    showTasks(selectedProjectId);
+//                    Project newProject = new Project(UUID.randomUUID().toString(), projectName, "dummy description", new ArrayList<>());
+//                    projects.add(newProject);
+//                    populateFolders();
+//                    selectedProjectId = newProject.getId();
+//                    showTasks(selectedProjectId);
+//
+//                    // Add project to the local SQLite database
+//                    int projectId=addProjectToDatabase(newProject);
+//                    Project newProject = new Project(projectId, projectName, "dummy description", new ArrayList<>());
+//                    projects.add(newProject);
+//                    populateFolders();
+//                    selectedProjectId = newProject.getId();
+//                    showTasks(selectedProjectId);
+//                    addUserProjectEntry(newProject.getId());
 
-                    // Send HTTP request to the Node.js API
-                    String apiUrl = "http://localhost:3000/addProject";
-                    String jsonPayload = "{\"name\":\"" + projectName + "\"}";
-                    HttpUtil.sendPostRequest(apiUrl, jsonPayload);
 
                     addDialog.dispose();
                 } else {
@@ -945,6 +957,30 @@ public class FolderList extends JFrame {
                 }
             }
         });
+
+
+//        addProjectButton.addActionListener(new ActionListener() {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                String projectName = nameField.getText().trim();
+//                if (!projectName.isEmpty()) {
+//                    Project newProject = new Project(UUID.randomUUID().toString(), projectName, new ArrayList<>());
+//                    projects.add(newProject);
+//                    populateFolders();
+//                    selectedProjectId = newProject.getId();
+//                    showTasks(selectedProjectId);
+//
+//                    // Send HTTP request to the Node.js API
+//                    String apiUrl = "http://localhost:3000/addProject";
+//                    String jsonPayload = "{\"name\":\"" + projectName + "\"}";
+//                    HttpUtil.sendPostRequest(apiUrl, jsonPayload);
+//
+//                    addDialog.dispose();
+//                } else {
+//                    JOptionPane.showMessageDialog(addDialog, "Project name cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+//                }
+//            }
+//        });
         addDialog.add(addProjectButton);
 
         addDialog.setLocationRelativeTo(this);
@@ -976,6 +1012,46 @@ public class FolderList extends JFrame {
 //        folderPanel.repaint();
 //    }
 
+    private void addUserProjectEntry(int projectId) {
+        String sql = "INSERT INTO user-projects (userId, projectId, isSelected) VALUES (?, ?, ?)";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, user.getId());
+            pstmt.setInt(2, projectId);
+            pstmt.setBoolean(3, false); // Default isSelected value
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error adding user-project entry to database.", "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+
+    private int addProjectToDatabase(Project project) {
+        String sql = "INSERT INTO projects (name, description) VALUES (?, ?)";
+        int generatedId = -1; // Default to -1 if the ID is not generated
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            pstmt.setString(1, project.getName());
+            pstmt.setString(2, project.getDescription());
+            pstmt.executeUpdate();
+
+            // Retrieve the generated ID
+            try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    generatedId = generatedKeys.getInt(1);
+                } else {
+                    throw new SQLException("Creating project failed, no ID obtained.");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error adding project to database.", "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
+        return generatedId;
+    }
+
+
     private void populateFolders() {
         folderPanel.removeAll();
         for (Project project : projects) {
@@ -1006,7 +1082,7 @@ public class FolderList extends JFrame {
             JPanel folderLabelPanel = new JPanel();
             folderLabelPanel.setPreferredSize(new Dimension(200, 120));
             folderLabelPanel.setOpaque(true);
-            folderLabelPanel.setBackground(project.getId().equals(selectedProjectId) ? DARK_ORANGE : PRIMARY_COLOR);
+            folderLabelPanel.setBackground(project.getId()==selectedProjectId ? DARK_ORANGE : PRIMARY_COLOR);
             folderLabelPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
             folderLabelPanel.setLayout(new GridBagLayout());
 
@@ -1102,8 +1178,12 @@ public class FolderList extends JFrame {
 
 
 
-    private void showTasks(String projectId) {
-        Project selectedProject = projects.stream().filter(p -> p.getId().equals(projectId)).findFirst().orElse(null);
+    private void showTasks(int projectId) {
+        Project selectedProject = projects.stream()
+                .filter(p -> p.getId() == projectId)
+                .findFirst()
+                .orElse(null);
+
         if (selectedProject == null || selectedProject.getTasks().isEmpty()) {
             JOptionPane.showMessageDialog(null, "No tasks available.", "Information", JOptionPane.INFORMATION_MESSAGE);
             return;
@@ -1349,8 +1429,8 @@ public class FolderList extends JFrame {
 
 
 
-    private void showAddTaskDialog(Project project) {
-        AddTaskModal dialog = new AddTaskModal(this, project.getId());
+    private void showAddTaskDialog() {
+        AddTaskModal dialog = new AddTaskModal(this, selectedProjectId,user.getId());
         dialog.setVisible(true);
 
         // Debug statement to check the status
@@ -1364,9 +1444,11 @@ public class FolderList extends JFrame {
             // Debug statement to check the created task
             System.out.println("Debug: Created Task: " + newTask);
 
+            Project currentProject = projects.stream().filter(p -> p.getId()==selectedProjectId).findFirst().orElse(null);
+
             if (newTask != null) {
-                project.getTasks().add(newTask);
-                showTasks(project.getId());
+                currentProject.getTasks().add(newTask);
+                showTasks(currentProject.getId());
             }
         }
     }
@@ -1430,8 +1512,8 @@ public class FolderList extends JFrame {
         System.out.println("Start timer: " + task.getName());
 
         stopTimer();  // Stop any existing timer
-        currentTask = task;
-        currentProject = projects.stream().filter(p -> p.getId().equals(selectedProjectId)).findFirst().orElse(null);
+       Task currentTask = task;
+       Project currentProject = projects.stream().filter(p -> p.getId()==selectedProjectId).findFirst().orElse(null);
         currentTaskDetailsLabel.setText("Time Spent: " + currentTask.getTimeSpent());
         currentTaskLabel.setText(currentProject.getName());
 
@@ -1465,9 +1547,9 @@ public class FolderList extends JFrame {
         if (currentTask != null) {
             currentTask.setRunning(false);
         }
-        currentTask = null;
-        currentProject = null;
-        currentTaskDetailsLabel.setText("No task running");
+//        currentTask = null;
+//        currentProject = null;
+//        currentTaskDetailsLabel.setText("No task running");
 
         // Refresh task list or table to update button states
         showTasks(selectedProjectId);
