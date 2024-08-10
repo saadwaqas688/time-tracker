@@ -154,12 +154,35 @@ public class FolderList extends JFrame {
 
 
 
-        projects = fetchProjects();
-            elapsedTimeBeforeStop = user.getGlobalTimer() * 1000L;
+//        ProjectUtils fetcher = new ProjectUtils();
+//        int userId = 1; // Example user ID
+//        projects = fetcher.fetchProjects(userId);
 
-            startGlobalTimer();
+        ProjectUtils projectUtils = new ProjectUtils();
+        int userId = user.getUserId(); // Replace with the actual user ID
 
-        
+        // Fetch projects and additional data
+        ProjectUtils.FetchProjectsResult result = projectUtils.fetchProjects(userId);
+
+        // Access the results
+        projects = result.getProjectList();
+        currentTask = result.getRunningTask();
+        Project selectedProject = result.getSelectedProject();
+
+        selectedProjectId = selectedProject != null ? selectedProject.getId() : null;
+
+        // Process the fetched projects
+        for (Project project : projects) {
+            System.out.println("Project: " + project.getName());
+            for (Task task : project.getTasks()) {
+                System.out.println(" - Task: " + task.getName());
+            }
+        }
+        elapsedTimeBeforeStop = user.getHoursWorkedDaily() * 1000L;
+
+        startGlobalTimer();
+
+
 
 //        if(isGlobalTimerRunning){
 //            elapsedTimeBeforeStop = user.getGlobalTimer() * 1000L;
@@ -583,7 +606,7 @@ public class FolderList extends JFrame {
         return searchPanel;
     }
 
-//data from local tables
+    //data from local tables
     private List<Project> fetchProjects() {
         List<Project> projectList = new ArrayList<>();
         String sql = "SELECT p.id AS projectId, p.name AS projectName, p.description AS projectDescription, t.id AS taskId, " +
@@ -1016,7 +1039,7 @@ public class FolderList extends JFrame {
         String sql = "INSERT INTO user-projects (userId, projectId, isSelected) VALUES (?, ?, ?)";
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, user.getId());
+            pstmt.setInt(1, user.getUserId());
             pstmt.setInt(2, projectId);
             pstmt.setBoolean(3, false); // Default isSelected value
             pstmt.executeUpdate();
@@ -1430,7 +1453,7 @@ public class FolderList extends JFrame {
 
 
     private void showAddTaskDialog() {
-        AddTaskModal dialog = new AddTaskModal(this, selectedProjectId,user.getId());
+        AddTaskModal dialog = new AddTaskModal(this, selectedProjectId,user.getUserId());
         dialog.setVisible(true);
 
         // Debug statement to check the status
@@ -1512,8 +1535,8 @@ public class FolderList extends JFrame {
         System.out.println("Start timer: " + task.getName());
 
         stopTimer();  // Stop any existing timer
-       Task currentTask = task;
-       Project currentProject = projects.stream().filter(p -> p.getId()==selectedProjectId).findFirst().orElse(null);
+        currentTask = task;
+        Project currentProject = projects.stream().filter(p -> p.getId()==selectedProjectId).findFirst().orElse(null);
         currentTaskDetailsLabel.setText("Time Spent: " + currentTask.getTimeSpent());
         currentTaskLabel.setText(currentProject.getName());
 
@@ -1615,6 +1638,61 @@ public class FolderList extends JFrame {
 
 
 
+//    private void initializeOrUpdateDatabase() {
+//        try {
+//            Class.forName("org.sqlite.JDBC"); // Load the SQLite JDBC driver
+//            try (Connection conn = DriverManager.getConnection(DB_URL)) {
+//                if (conn != null) {
+//                    try (Statement stmt = conn.createStatement()) {
+//                        // Create the tasks table if it does not exist
+//                        String createTableSQL = "CREATE TABLE IF NOT EXISTS Tasks (" +
+//                                "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+//                                "timeStamp INTEGER," +
+//                                "isRunning INTEGER," +
+//                                "timeSpent INTEGER)";
+//                        stmt.execute(createTableSQL);
+//                        System.out.println("Database and tasks table initialized.");
+//
+//                        if (currentTask != null) {
+//                            // Ensure currentTask is initialized and has an ID
+//                            String taskIdString = currentTask.getId();
+//                            int taskId;
+//                            try {
+//                                taskId = Integer.parseInt(taskIdString);
+//                            } catch (NumberFormatException e) {
+//                                System.err.println("Error converting task ID to integer: " + e.getMessage());
+//                                return; // Exit the method if the ID is invalid
+//                            }
+//
+//                            // Set all tasks to not running
+//                            String updateAllTasksSQL = "UPDATE tasks SET isRunning = 0 WHERE isRunning = 1";
+//                            try (PreparedStatement pstmt = conn.prepareStatement(updateAllTasksSQL)) {
+//                                pstmt.executeUpdate();
+//                            }
+//
+//                            // Check if the task already exists in the database
+//                            String checkTaskSQL = "SELECT COUNT(*) FROM tasks WHERE id = ?";
+//                            try (PreparedStatement checkPstmt = conn.prepareStatement(checkTaskSQL)) {
+//                                checkPstmt.setInt(1, taskId);
+//                                try (ResultSet rs = checkPstmt.executeQuery()) {
+//                                    if (rs.next() && rs.getInt(1) > 0) {
+//                                        // Task exists, update the record
+//                                        updateTaskRecord(conn, taskId);
+//                                    } else {
+//                                        // Task does not exist, insert a new record
+//                                        insertTaskRecord(conn, taskId);
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        } catch (ClassNotFoundException | SQLException e) {
+//            System.err.println("Error initializing or updating database: " + e.getMessage());
+//        }
+//    }
+
     private void initializeOrUpdateDatabase() {
         try {
             Class.forName("org.sqlite.JDBC"); // Load the SQLite JDBC driver
@@ -1622,11 +1700,14 @@ public class FolderList extends JFrame {
                 if (conn != null) {
                     try (Statement stmt = conn.createStatement()) {
                         // Create the tasks table if it does not exist
-                        String createTableSQL = "CREATE TABLE IF NOT EXISTS tasks (" +
+                        String createTableSQL = "CREATE TABLE IF NOT EXISTS UserTasks (" +
                                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                                "timeStamp INTEGER," +
-                                "isRunning INTEGER," +
-                                "timeSpent INTEGER)";
+                                "user_id INTEGER," + // Added user_id column
+                                "task_id INTEGER," + // Added task_id column
+                                "status TEXT DEFAULT 'ToDo',"+
+                                "time_stamp INTEGER," +
+                                "is_running INTEGER," +
+                                "time_spent INTEGER)";
                         stmt.execute(createTableSQL);
                         System.out.println("Database and tasks table initialized.");
 
@@ -1641,16 +1722,20 @@ public class FolderList extends JFrame {
                                 return; // Exit the method if the ID is invalid
                             }
 
-                            // Set all tasks to not running
-                            String updateAllTasksSQL = "UPDATE tasks SET isRunning = 0 WHERE isRunning = 1";
+                            int userId = user.getUserId(); // Retrieve the user ID
+
+                            // Set all tasks to not running for the given user
+                            String updateAllTasksSQL = "UPDATE UserTasks SET is_running = 0 WHERE user_id = ? AND is_running = 1";
                             try (PreparedStatement pstmt = conn.prepareStatement(updateAllTasksSQL)) {
+                                pstmt.setInt(1, userId);
                                 pstmt.executeUpdate();
                             }
 
-                            // Check if the task already exists in the database
-                            String checkTaskSQL = "SELECT COUNT(*) FROM tasks WHERE id = ?";
+                            // Check if the task already exists in the database for the given user
+                            String checkTaskSQL = "SELECT COUNT(*) FROM UserTasks WHERE task_id = ? AND user_id = ?";
                             try (PreparedStatement checkPstmt = conn.prepareStatement(checkTaskSQL)) {
                                 checkPstmt.setInt(1, taskId);
+                                checkPstmt.setInt(2, userId);
                                 try (ResultSet rs = checkPstmt.executeQuery()) {
                                     if (rs.next() && rs.getInt(1) > 0) {
                                         // Task exists, update the record
@@ -1670,9 +1755,10 @@ public class FolderList extends JFrame {
         }
     }
 
-    private void updateTaskRecord(Connection conn, int taskId) {
+
+    private void updateTaskRecord(Connection conn,  int taskId) {
         try {
-            String sql = "UPDATE tasks SET timeStamp = ?, isRunning = ?, timeSpent = ? WHERE id = ?";
+            String sql = "UPDATE UserTasks SET time_stamp = ?, is_running = ?, time_spent = ? WHERE user_id = ? AND task_id = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 long currentTimeStamp = System.currentTimeMillis() / 1000; // timestamp in seconds
                 int timeSpent = convertTimeStringToSeconds(currentTask.getTimeSpent());
@@ -1680,13 +1766,14 @@ public class FolderList extends JFrame {
                 pstmt.setLong(1, currentTimeStamp);
                 pstmt.setInt(2, currentTask.isRunning() ? 1 : 0);
                 pstmt.setInt(3, timeSpent);
-                pstmt.setInt(4, taskId); // Set the task ID to identify the record to update
+                pstmt.setInt(4, user.getUserId()); // Set the user ID to identify the record to update
+                pstmt.setInt(5, taskId); // Set the task ID to identify the record to update
 
                 int rowsAffected = pstmt.executeUpdate();
                 if (rowsAffected > 0) {
                     System.out.println("Database updated successfully.");
                 } else {
-                    System.out.println("No rows updated in the database. Check if the task ID exists.");
+                    System.out.println("No rows updated in the database. Check if the user ID and task ID combination exists.");
                 }
             }
         } catch (SQLException e) {
@@ -1694,16 +1781,31 @@ public class FolderList extends JFrame {
         }
     }
 
-    private void insertTaskRecord(Connection conn, int taskId) {
+    private void insertTaskRecord(Connection conn,int taskId) {
         try {
-            String sql = "INSERT INTO tasks (id, timeStamp, isRunning, timeSpent) VALUES (?, ?, ?, ?)";
+            // Check if the record already exists
+            String checkSql = "SELECT COUNT(*) FROM UserTasks WHERE user_id = ? AND task_id = ?";
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                checkStmt.setInt(1, user.getUserId());
+                checkStmt.setInt(2, taskId);
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        System.out.println("Record already exists for user ID " + user.getUserId() + " and task ID " + taskId);
+                        return; // Exit the method if the record already exists
+                    }
+                }
+            }
+
+            // Insert new record
+            String sql = "INSERT INTO UserTasks (user_id, task_id, time_stamp, is_running, time_spent) VALUES (?, ?, ?, ?, ?)";
             try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 long currentTimeStamp = System.currentTimeMillis() / 1000; // timestamp in seconds
 
-                pstmt.setInt(1, taskId); // Set task ID
-                pstmt.setLong(2, currentTimeStamp); // Set current timestamp
-                pstmt.setInt(3, currentTask.isRunning() ? 1 : 0); // Set running status
-                pstmt.setInt(4, 0); // Set timeSpent to 0
+                pstmt.setInt(1, user.getUserId()); // Set user ID
+                pstmt.setInt(2, taskId); // Set task ID
+                pstmt.setLong(3, currentTimeStamp); // Set current timestamp
+                pstmt.setInt(4, 0); // Set running status
+                pstmt.setInt(5, 0); // Set timeSpent to 0
 
                 int rowsAffected = pstmt.executeUpdate();
                 if (rowsAffected > 0) {
@@ -1718,15 +1820,63 @@ public class FolderList extends JFrame {
     }
 
 
+//    private void updateTaskRecord(Connection conn, int taskId) {
+//        try {
+//            String sql = "UPDATE UserTasks SET time_stamp = ?, is_running = ?, time_spent = ? WHERE id = ?";
+//            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+//                long currentTimeStamp = System.currentTimeMillis() / 1000; // timestamp in seconds
+//                int timeSpent = convertTimeStringToSeconds(currentTask.getTimeSpent());
+//
+//                pstmt.setLong(1, currentTimeStamp);
+//                pstmt.setInt(2, currentTask.isRunning() ? 1 : 0);
+//                pstmt.setInt(3, timeSpent);
+//                pstmt.setInt(4, taskId); // Set the task ID to identify the record to update
+//
+//                int rowsAffected = pstmt.executeUpdate();
+//                if (rowsAffected > 0) {
+//                    System.out.println("Database updated successfully.");
+//                } else {
+//                    System.out.println("No rows updated in the database. Check if the task ID exists.");
+//                }
+//            }
+//        } catch (SQLException e) {
+//            System.err.println("Error updating task record: " + e.getMessage());
+//        }
+//    }
+//
+//    private void insertTaskRecord(Connection conn, int taskId) {
+//        try {
+//            String sql = "INSERT INTO UserTasks (id, time_stamp, is_running, time_spent) VALUES (?, ?, ?, ?)";
+//            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+//                long currentTimeStamp = System.currentTimeMillis() / 1000; // timestamp in seconds
+//
+//                pstmt.setInt(1, taskId); // Set task ID
+//                pstmt.setLong(2, currentTimeStamp); // Set current timestamp
+//                pstmt.setInt(3, currentTask.isRunning() ? 1 : 0); // Set running status
+//                pstmt.setInt(4, 0); // Set timeSpent to 0
+//
+//                int rowsAffected = pstmt.executeUpdate();
+//                if (rowsAffected > 0) {
+//                    System.out.println("Task record initialized in the database.");
+//                } else {
+//                    System.out.println("No rows inserted into the database.");
+//                }
+//            }
+//        } catch (SQLException e) {
+//            System.err.println("Error inserting task record: " + e.getMessage());
+//        }
+//    }
+
+
 
     private void updateGlobalTimerInDatabase(long totalSeconds) {
-        String sql = "UPDATE users SET global_timer = ? WHERE id = ?";
+        String sql = "UPDATE UserTime SET hours_worked_daily = ? WHERE user_id = ?";
 
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setLong(1, totalSeconds);
-            pstmt.setInt(2, 1); // replace userId with the actual user ID
+            pstmt.setInt(2, user.getUserId()); // replace userId with the actual user ID
             pstmt.executeUpdate();
 
         } catch (SQLException e) {
@@ -1858,7 +2008,7 @@ public class FolderList extends JFrame {
             try {
                 long totalSeconds = elapsedTime / 1000;
                 updateGlobalTimerInDatabase(totalSeconds);
-                user.setGlobalTimer((int) totalSeconds);
+                user.setTimeSpent((int) totalSeconds);
 
             } catch (Exception e) {
                 System.err.println("Error updating database: " + e.getMessage());

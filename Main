@@ -10,3 +10,26 @@ public class Main {
         });
     }
 }
+
+//import javax.swing.*;
+//
+//public class Main {
+//    public static void main(String[] args) {
+//        // Seed the database
+//        seedDatabase();
+//
+//        // Launch the login form
+//        SwingUtilities.invokeLater(() -> {
+//            Login loginForm = new Login();
+//            loginForm.setVisible(true);
+//        });
+//    }
+//
+//    private static void seedDatabase() {
+//        try {
+//            DataSeeding.main(null);
+//        } catch (Exception e) {
+//            System.err.println("Error seeding the database: " + e.getMessage());
+//        }
+//    }
+//}
