@@ -1,12 +1,13 @@
 package org.example;
 import javax.swing.*;
+import javax.swing.border.AbstractBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 import javax.swing.table.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.sql.*;
 import java.util.*;
 import java.util.List;
@@ -22,8 +23,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
 
 import java.awt.Toolkit;
-
-
+import java.util.stream.Collectors;
 
 
 public class FolderList extends JFrame {
@@ -62,6 +62,8 @@ public class FolderList extends JFrame {
     public static final Color SECONDARY_COLOR = new Color(0, 36, 51);
     public static final Color PRIMARY_COLOR = new Color(3, 50, 70);
     public static final Color PRIMARY_TEXT_COLOR = new Color(255, 255, 255);
+    public static final Color SECONDARY_TEXT_COLOR = new Color(160, 172, 187);
+
 
     /* Status colors */
     public static final Color SUCCESS_COLOR = new Color(17, 235, 130);
@@ -104,16 +106,6 @@ public class FolderList extends JFrame {
     private boolean isDefaultSelectedTaskRunning;
     private User user;
 
-
-
-    //    private static FolderList instance;
-//    // Static method to get the singleton instance
-//    public static FolderList getInstance() {
-//        if (instance == null) {
-//            instance = new FolderList();
-//        }
-//        return instance;
-//    }
     FolderList(User user) {
 
         this.user = user;
@@ -138,8 +130,7 @@ public class FolderList extends JFrame {
 
         // Add Project Panel
 
-
-        centerPanel.add(createAddProjectPanel());
+        centerPanel.add(createSearchProjectPanel());
 
         centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE));
 
@@ -154,10 +145,6 @@ public class FolderList extends JFrame {
 
 
 
-//        ProjectUtils fetcher = new ProjectUtils();
-//        int userId = 1; // Example user ID
-//        projects = fetcher.fetchProjects(userId);
-
         ProjectUtils projectUtils = new ProjectUtils();
         int userId = user.getUserId(); // Replace with the actual user ID
 
@@ -168,6 +155,10 @@ public class FolderList extends JFrame {
         projects = result.getProjectList();
         currentTask = result.getRunningTask();
         Project selectedProject = result.getSelectedProject();
+
+        if (selectedProject == null && !projects.isEmpty()) {
+            selectedProject = projects.get(0);
+        }
 
         selectedProjectId = selectedProject != null ? selectedProject.getId() : null;
 
@@ -184,22 +175,15 @@ public class FolderList extends JFrame {
 
 
 
-//        if(isGlobalTimerRunning){
-//            elapsedTimeBeforeStop = user.getGlobalTimer() * 1000L;
-//
-//            startGlobalTimer();
-//
-//        }
-
 
 
         timer = new Timer();
 
 
 
-        populateFolders();
+        populateProjects(projects);
         if (selectedProjectId != -1 ) {
-            showTasks(selectedProjectId);
+            showTasks(getTasksByProjectId(selectedProjectId));
         }
 
         // Task Panel
@@ -359,62 +343,147 @@ public class FolderList extends JFrame {
     }
 
 
-//    private JPanel createAddProjectPanel() {
-//        JPanel addProjectPanel = new JPanel();
-//        addProjectPanel.setPreferredSize(new Dimension(getWidth(), 40));
-//        addProjectPanel.setLayout(new BorderLayout());
-//        addProjectPanel.setBackground(ADD_PROJECT_PANEL_COLOR);
-//        addProjectPanel.setOpaque(false); // Make panel transparent
-//        addProjectPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
-//
-//        ImageIcon addProjectIcon = loadImageIcon("icons/add-project-icon.png", 30, 30); // Adjust path and size as needed
-//
-//        JButton addProjectButton = new JButton();
-//        if (addProjectIcon != null) {
-//            addProjectButton.setIcon(addProjectIcon); // Set the icon
-//        } else {
-//            addProjectButton.setText("Add Project"); // Fallback text if icon not found
-//        }
-//
-//        addProjectButton.setBackground(WARNING_COLOR);
-//        addProjectButton.setPreferredSize(new Dimension(90, 30));
-//        addProjectPanel.add(addProjectButton, BorderLayout.EAST);
-//
-//        return addProjectPanel;
-//    }
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //search project panel
+    private JPanel createSearchProjectPanel() {
+        JPanel searchProjectPanel = new JPanel();
+        searchProjectPanel.setPreferredSize(new Dimension(getWidth(), 60)); // Fixed height of 60 pixels
+        searchProjectPanel.setBackground(SECONDARY_COLOR);
+        searchProjectPanel.setLayout(new BorderLayout());
+        searchProjectPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+        ImageIcon searchIcon = loadImageIcon("icons/search-icon.png", 20, 20);
 
-    private JPanel createAddProjectPanel() {
-        JPanel addProjectPanel = new JPanel();
-        addProjectPanel.setPreferredSize(new Dimension(getWidth(), 40));
-        addProjectPanel.setLayout(new BorderLayout());
-        addProjectPanel.setBackground(ADD_PROJECT_PANEL_COLOR);
-        addProjectPanel.setOpaque(false); // Make panel transparent
-        addProjectPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+        SearchTask searchField = new SearchTask("Search Project", SECONDARY_TEXT_COLOR, PRIMARY_TEXT_COLOR,searchIcon);
+        searchField.setBackground(PRIMARY_COLOR);
+        searchField.setPreferredSize(new Dimension(180, 35)); // Set preferred size for text field
+        searchField.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Add padding
 
-        ImageIcon addProjectIcon = loadImageIcon("icons/add-project-icon.png", 30, 30); // Adjust path and size as needed
-
-        JButton addProjectButton = new JButton();
-        if (addProjectIcon != null) {
-            addProjectButton.setIcon(addProjectIcon); // Set the icon
-        } else {
-            addProjectButton.setText("Add Project"); // Fallback text if icon not found
-        }
-
-
-        addProjectButton.addActionListener(e -> {
-            showAddProjectDialog();
+        searchField.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (!searchField.hasFocus()) {
+                    searchField.setFocusable(true);
+                    searchField.requestFocus();
+                }
+            }
         });
 
-        addProjectButton.setBackground(WARNING_COLOR);
-        addProjectButton.setPreferredSize(new Dimension(90, 30));
-        addProjectPanel.add(addProjectButton, BorderLayout.EAST);
+        // Add focus listener to handle losing focus
+        searchField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                searchField.setFocusable(false);
+            }
+        });
 
-        return addProjectPanel;
+        // Add a mouse listener to the frame to lose focus when clicking outside
+        searchProjectPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (searchField.hasFocus() && !searchField.getBounds().contains(e.getPoint())) {
+                    searchField.transferFocus(); // Moves focus to the next component
+                }
+            }
+        });
+        // Add a DocumentListener to the search field to handle text changes
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filterProjects();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filterProjects();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filterProjects();
+            }
+
+            private void filterProjects() {
+                String searchText = searchField.getText().trim().toLowerCase();
+                if (searchText.isEmpty()) {
+                    // If the search field is empty, show the original list of projects
+                    populateProjects(projects);
+                } else {
+                    // Filter the projects based on the search text
+                    List<Project> filteredProjects = projects.stream()
+                            .filter(project -> project.getName().toLowerCase().contains(searchText))
+                            .collect(Collectors.toList());
+
+                    // Update the UI with the filtered projects
+                    populateProjects(filteredProjects);
+                }
+            }
+        });
+
+        searchProjectPanel.add(searchField, BorderLayout.WEST);
+
+//        searchProjectPanel.addMouseListener(new MouseAdapter() {
+//            @Override
+//            public void mouseClicked(MouseEvent e) {
+//                // Check if the click is inside the searchField
+//                if (searchField.getBounds().contains(e.getPoint())) {
+//                    searchField.setFocusable(true);
+//                    searchField.requestFocusInWindow();
+//                } else {
+//                    searchField.setFocusable(false);
+//                    searchField.transferFocus();
+//                }
+//            }
+//        });
+//        searchProjectPanel.addMouseListener(new MouseAdapter() {
+//            @Override
+//            public void mouseClicked(MouseEvent e) {
+//                if (!searchField.getBounds().contains(e.getPoint())) {
+//                    searchField.setFocusable(false);
+//                    searchField.transferFocus();
+//                } else {
+//                    searchField.setFocusable(true);
+//                    searchField.requestFocusInWindow();
+//                }
+//            }
+//        });
+        return searchProjectPanel;
     }
 
 
 
-
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
 
     //side panel container
     private void addSidePanel(JPanel mainPanel) {
@@ -547,10 +616,132 @@ public class FolderList extends JFrame {
         }
     }
 
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    private JPanel createSearchPanel() {
+        JPanel searchPanel = new JPanel();
+        searchPanel.setPreferredSize(new Dimension(getWidth(), 60)); // Fixed height of 60 pixels
+        searchPanel.setBackground(SECONDARY_COLOR);
+        searchPanel.setLayout(new BorderLayout());
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+
+        // Use the custom TextField class with a placeholder and color settings
+        ImageIcon searchIcon = loadImageIcon("icons/search-icon.png", 20, 20);
+
+        SearchTask searchField = new SearchTask("Search Task", SECONDARY_TEXT_COLOR, PRIMARY_TEXT_COLOR,searchIcon);
+        searchField.setBackground(PRIMARY_COLOR);
+        searchField.setPreferredSize(new Dimension(180, 35)); // Set preferred size for text field
+        searchField.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Add padding
+
+        ImageIcon addTaskIcon = loadImageIcon("icons/add-project-icon.png", 30, 30); // Adjust path and size as needed
+        JButton addTaskButton = new JButton();
+        if (addTaskIcon != null) {
+            addTaskButton.setIcon(addTaskIcon); // Set the icon
+        } else {
+            addTaskButton.setText("Add Task"); // Fallback text if icon not found
+        }
+        searchField.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (!searchField.hasFocus()) {
+                    searchField.setFocusable(true);
+                    searchField.requestFocus();
+                }
+            }
+        });
+
+        // Add focus listener to handle losing focus
+        searchField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                searchField.setFocusable(false);
+            }
+        });
+
+        // Add a mouse listener to the frame to lose focus when clicking outside
+        searchPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (searchField.hasFocus() && !searchField.getBounds().contains(e.getPoint())) {
+                    searchField.transferFocus(); // Moves focus to the next component
+                }
+            }
+        });
+
+        addTaskButton.addActionListener(e -> showAddTaskDialog());
+        addTaskButton.setBackground(WARNING_COLOR);
+        addTaskButton.setPreferredSize(new Dimension(90, 20));
+
+        searchPanel.add(searchField, BorderLayout.WEST);
+        searchPanel.add(addTaskButton, BorderLayout.EAST);
+
+        // Add DocumentListener to searchField to listen for changes in text
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filterTasks();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filterTasks();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filterTasks();
+            }
+
+            private void filterTasks() {
+                String searchText = searchField.getText().trim().toLowerCase();
+                if (searchText.isEmpty()) {
+                    showTasks(getTasksByProjectId(selectedProjectId)); // Show tasks of the selected project
+                } else {
+                    List<Task> filteredTasks = projects.stream()
+                            .flatMap(project -> project.getTasks().stream())
+                            .filter(task -> task.getStatus().toLowerCase().contains(searchText))
+                            .collect(Collectors.toList());
+                    showTasks(filteredTasks);
+                }
+            }
+        });
+
+        return searchPanel;
+    }
 
 
-
-    //serarch panel
 //    private JPanel createSearchPanel() {
 //        JPanel searchPanel = new JPanel();
 //        searchPanel.setPreferredSize(new Dimension(getWidth(), 60));// Fixed height of 29 pixels
@@ -562,161 +753,198 @@ public class FolderList extends JFrame {
 //        searchField.setBackground(PRIMARY_COLOR);
 //        searchField.setPreferredSize(new Dimension(180,35));// Set preferred size for text field
 //
-//        JButton addTaskButton = new JButton("Add Task");
+//        ImageIcon addTaskIcon = loadImageIcon("icons/add-project-icon.png", 30, 30); // Adjust path and size as needed
+//
+//        JButton addTaskButton = new JButton();
+//        if (addTaskIcon != null) {
+//            addTaskButton.setIcon(addTaskIcon); // Set the icon
+//        } else {
+//            addTaskButton.setText("Add Task"); // Fallback text if icon not found
+//        }
+//
+//
+//        addTaskButton.addActionListener(e -> {
+//            showAddTaskDialog();
+//
+//        });
+//
 //        addTaskButton.setBackground(WARNING_COLOR);
+//        addTaskButton.setPreferredSize(new Dimension(90, 20));
 //
 //        searchPanel.add(searchField, BorderLayout.WEST);
 //        searchPanel.add(addTaskButton, BorderLayout.EAST);
 //
 //        return searchPanel;
 //    }
+//private JPanel createSearchPanel() {
+//    JPanel searchPanel = new JPanel();
+//    searchPanel.setPreferredSize(new Dimension(getWidth(), 60)); // Fixed height of 60 pixels
+//    searchPanel.setBackground(SECONDARY_COLOR);
+//    searchPanel.setLayout(new BorderLayout());
+//    searchPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+//
+//    JTextField searchField = new JTextField();
+//    searchField.setBackground(PRIMARY_COLOR);
+//    searchField.setPreferredSize(new Dimension(180, 35)); // Set preferred size for text field
+//    searchField.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); // Add padding (top, left, bottom, right)
+//
+//    // Set placeholder text (using a custom approach for Java)
+//    searchField.setForeground(PRIMARY_TEXT_COLOR);
+//    searchField.setText("Search Task");
+//
+//    searchField.addFocusListener(new FocusAdapter() {
+//        @Override
+//        public void focusGained(FocusEvent e) {
+//            if (searchField.getText().equals("Search Task")) {
+//                searchField.setText("");
+//                searchField.setForeground(PRIMARY_TEXT_COLOR);
+//            }
+//        }
+//
+//        @Override
+//        public void focusLost(FocusEvent e) {
+//            if (searchField.getText().isEmpty()) {
+//                searchField.setForeground(PRIMARY_TEXT_COLOR);
+//                searchField.setText("Search Task");
+//            }
+//        }
+//    });
+//
+//    // Add a DocumentListener to the search field to handle text changes
+//    searchField.getDocument().addDocumentListener(new DocumentListener() {
+//        @Override
+//        public void insertUpdate(DocumentEvent e) {
+//            filterTasks();
+//        }
+//
+//        @Override
+//        public void removeUpdate(DocumentEvent e) {
+//            filterTasks();
+//        }
+//
+//        @Override
+//        public void changedUpdate(DocumentEvent e) {
+//            filterTasks();
+//        }
+//
+//        private void filterTasks() {
+//            String searchText = searchField.getText().trim().toLowerCase();
+//            Project selectedProject = getSelectedProject();
+//            if (selectedProject == null) {
+//                return; // No project selected
+//            }
+//
+//            List<Task> tasks = selectedProject.getTasks();
+//            if (tasks == null) {
+//                return; // No tasks available
+//            }
+//
+//            if (searchText.isEmpty()) {
+//                // If the search field is empty, show the original list of tasks
+//                showTasks(getTasksByProjectId(selectedProject.getId()));
+//            } else {
+//                // Filter the tasks based on the search text
+//                List<Task> filteredTasks = tasks.stream()
+//                        .filter(task -> task.getName().toLowerCase().contains(searchText))
+//                        .collect(Collectors.toList());
+//
+//                // Update the UI with the filtered tasks
+//                updateTaskTable(filteredTasks);
+//            }
+//        }
+//    });
+//
+//    ImageIcon addTaskIcon = loadImageIcon("icons/add-project-icon.png", 30, 30); // Adjust path and size as needed
+//
+//    JButton addTaskButton = new JButton();
+//    if (addTaskIcon != null) {
+//        addTaskButton.setIcon(addTaskIcon); // Set the icon
+//    } else {
+//        addTaskButton.setText("Add Task"); // Fallback text if icon not found
+//    }
+//
+//    addTaskButton.addActionListener(e -> {
+//        showAddTaskDialog();
+//    });
+//
+//    addTaskButton.setBackground(WARNING_COLOR);
+//    addTaskButton.setPreferredSize(new Dimension(90, 20));
+//
+//    searchPanel.add(searchField, BorderLayout.WEST);
+//    searchPanel.add(addTaskButton, BorderLayout.EAST);
+//
+//    return searchPanel;
+//}
+//
+//    // Helper method to get the selected project (you can implement this based on your application's logic)
+//    private Project getSelectedProject() {
+//        return projects.stream().filter(p -> p.getId()==selectedProjectId).findFirst().orElse(null);
+//    }
+//
+//    // Helper method to update the task table with a filtered list of tasks
+//    private void updateTaskTable(List<Task> filteredTasks) {
+//        String[] columnNames = {"Task", "Description", "Create Date", "Status", "Total Time"};
+//        Object[][] taskData = new Object[filteredTasks.size()][5];
+//
+//        for (int i = 0; i < filteredTasks.size(); i++) {
+//            Task task = filteredTasks.get(i);
+//            taskData[i][0] = task;  // Store the Task object itself
+//            taskData[i][1] = task.getDescription();
+//            taskData[i][2] = task.getCreateDate().toString();
+//            taskData[i][3] = task.getStatus();
+//            taskData[i][4] = task.getTotalTime();
+//        }
+//
+//        DefaultTableModel tableModel = new DefaultTableModel(taskData, columnNames) {
+//            @Override
+//            public boolean isCellEditable(int row, int column) {
+//                return column == 0 || column == 3; // Editable for Task and Status columns
+//            }
+//
+//            @Override
+//            public Class<?> getColumnClass(int column) {
+//                if (column == 0) return Task.class; // Custom class for task column
+//                return String.class;
+//            }
+//        };
+//
+//        taskTable.setModel(tableModel);
+//    }
 
-    private JPanel createSearchPanel() {
-        JPanel searchPanel = new JPanel();
-        searchPanel.setPreferredSize(new Dimension(getWidth(), 60));// Fixed height of 29 pixels
-        searchPanel.setBackground(SECONDARY_COLOR);
-        searchPanel.setLayout(new BorderLayout());
-        searchPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
-
-        JTextField searchField = new JTextField();
-        searchField.setBackground(PRIMARY_COLOR);
-        searchField.setPreferredSize(new Dimension(180,35));// Set preferred size for text field
-
-        ImageIcon addTaskIcon = loadImageIcon("icons/add-project-icon.png", 30, 30); // Adjust path and size as needed
-
-        JButton addTaskButton = new JButton();
-        if (addTaskIcon != null) {
-            addTaskButton.setIcon(addTaskIcon); // Set the icon
-        } else {
-            addTaskButton.setText("Add Task"); // Fallback text if icon not found
-        }
-
-
-        addTaskButton.addActionListener(e -> {
-            showAddTaskDialog();
-
-        });
-
-        addTaskButton.setBackground(WARNING_COLOR);
-        addTaskButton.setPreferredSize(new Dimension(90, 20));
-
-        searchPanel.add(searchField, BorderLayout.WEST);
-        searchPanel.add(addTaskButton, BorderLayout.EAST);
-
-        return searchPanel;
-    }
-
-    //data from local tables
-    private List<Project> fetchProjects() {
-        List<Project> projectList = new ArrayList<>();
-        String sql = "SELECT p.id AS projectId, p.name AS projectName, p.description AS projectDescription, t.id AS taskId, " +
-                "t.name AS taskName, t.description AS taskDescription, t.createDate AS taskCreateDate, " +
-                "t.status AS taskStatus, t.timeSpent AS timeSpent,t.isRunning  " +
-                "FROM projects p " +
-                "JOIN tasks t ON p.id = t.projectId " +
-                "JOIN user_tasks ut ON t.id = ut.taskId " +
-                "WHERE ut.userId = ?";
-
-        System.out.println("Starting fetchProjects method.");
-
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            int userId = 1; // User ID to query
-            pstmt.setInt(1, userId);
-            System.out.println("Executing query with userId: " + userId);
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (!rs.isBeforeFirst()) {
-                    System.out.println("No results found for the query.");
-                } else {
-                    System.out.println("Query returned results.");
-                }
-
-                Map<String, Project> projectMap = new HashMap<>();
-                Task runningTask = null; // Track the running task
-                Project selectedProject = null;
-
-                while (rs.next()) {
-                    int projectId = rs.getInt("projectId");
-                    String projectName = rs.getString("projectName");
-                    String projectDescription= rs.getString("projectDescription");
-                    String taskId = rs.getString("taskId");
-                    String taskName = rs.getString("taskName");
-                    String taskDescription = rs.getString("taskDescription");
-                    String taskCreateDate = rs.getString("taskCreateDate");
-                    String taskStatus = rs.getString("taskStatus");
-                    int timeSpent = rs.getInt("timeSpent");
-                    boolean isRunning = rs.getBoolean("isRunning"); // Read isRunning value
-
-
-                    System.out.println("Processing projectId: " + projectId);
-                    System.out.println("Project Name: " + projectName);
-                    System.out.println("Task ID: " + taskId);
-                    System.out.println("Task Name: " + taskName);
-                    System.out.println("Task Description: " + taskDescription);
-                    System.out.println("Task Create Date: " + taskCreateDate);
-                    System.out.println("Task Status: " + taskStatus);
-                    System.out.println("Task Duration: " + timeSpent);
-
-                    Project project = projectMap.computeIfAbsent(String.valueOf(projectId), k -> createProject(rs));
-
-                    if (project != null) {
-                        Task task = new Task(
-                                projectId,
-                                taskId,
-                                taskName,
-                                taskDescription,
-                                taskCreateDate,
-                                taskStatus,
-                                timeSpent
-                        );
-
-                        if (isRunning) {
-                            System.out.println("task is running: " + taskId);
-                            runningTask = task; // Update the running task
-                            selectedProject = project; // Update the project of the running task
-                        }
-
-                        System.out.println("Adding task to project: " + taskId);
-
-                        project.getTasks().add(task);
-
-
-
-                        // Check if this is the selected project
-//                        if (project.getId().equals(selectedProjectId)) {
-//                            // Check if we need to find the selected task
-//                            if (selectedTaskId != null && task.getId().equals(selectedTaskId)) {
-//                                System.out.println("Found selected task: " + selectedTaskId);
-//                                currentTask = task;
-//                            }
-//                        }
-                    }
-                }
-
-                if (runningTask != null) {
-                    currentTask = runningTask;
-                    selectedProjectId = selectedProject != null ? selectedProject.getId() : null;
-                    System.out.println("Found running task: " + runningTask.getId());
-                    System.out.println("Selected project: " + selectedProjectId);
-                } else {
-                    System.out.println("No running tasks found.");
-                }
-
-                System.out.println("Adding projects to the list.");
-                projectList.addAll(projectMap.values());
-            } catch (SQLException e) {
-                System.err.println("Error executing query: " + e.getMessage());
-                e.printStackTrace();
-            }
-        } catch (SQLException e) {
-            System.err.println("Error connecting to the database: " + e.getMessage());
-            e.printStackTrace();
-        }
-        System.out.println("fetchProjects method completed.");
-        return projectList;
-    }
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
 
     private Project createProject(ResultSet rs) {
         try {
@@ -737,79 +965,6 @@ public class FolderList extends JFrame {
             return null;
         }
     }
-
-
-
-
-
-
-//  data from api
-//
-//    private List<Project> fetchProjects() {
-//        List<Project> projectList = new ArrayList<>();
-//        String apiUrl = "http://localhost:3000/getProjects";
-//        String response = HttpUtil.sendGetRequest(apiUrl);
-//
-//        try {
-//            JSONArray jsonArray = new JSONArray(response);
-//            for (int i = 0; i < jsonArray.length(); i++) {
-//                JSONObject jsonObject = jsonArray.getJSONObject(i);
-//                List<Task> tasks = parseTasks(jsonObject.optJSONArray("tasks"));
-//
-//                Project project = new Project(
-//                        jsonObject.getString("id"),
-//                        jsonObject.getString("name"),
-//                        tasks
-//                );
-//                projectList.add(project);
-//
-//                // Check if this is the selected project
-//                if (project.getId().equals(selectedProjectId)) {
-//
-//                    // Check if we need to find the selected task
-//                    if (selectedTaskId != null) {
-//                        for (Task task : project.getTasks()) {
-//                            if (task.getId().equals(selectedTaskId)) {
-//                                currentTask = task;
-//                                break;
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//        return projectList;
-//    }
-//
-//    private List<Task> parseTasks(JSONArray tasksArray) {
-//        List<Task> tasks = new ArrayList<>();
-//        if (tasksArray != null) {
-//            for (int i = 0; i < tasksArray.length(); i++) {
-//                JSONObject taskObject = tasksArray.getJSONObject(i);
-//
-//                // Extract values from JSON object
-//                String taskId = taskObject.optString("id", UUID.randomUUID().toString());
-//                String taskName = taskObject.optString("name", "New Task");
-//                String taskDescription = taskObject.optString("description", "Description of the new task");
-//                String taskCreateDate = taskObject.optString("createDate", "2024-07-25");
-//                String taskStatus = taskObject.optString("status", "Open");
-//                String taskDuration = taskObject.optString("duration", "00:00:00");
-//                String projectId = taskObject.optString("id", UUID.randomUUID().toString());
-//
-//                // Create new Task object with extracted values
-//                Task newTask = new Task(projectId,taskId, taskName, taskDescription, taskCreateDate, taskStatus, taskDuration);
-//
-//                // Add the new Task to the list
-//                tasks.add(newTask);
-//            }
-//        }
-//        return tasks;
-//    }
-
-
 
 
 
@@ -942,99 +1097,6 @@ public class FolderList extends JFrame {
         eventListenerThread.start();
     }
 
-    private void showAddProjectDialog() {
-        JDialog addDialog = new JDialog(this, "Add New Project", true);
-        addDialog.setSize(300, 200);
-        addDialog.setLayout(new GridLayout(3, 1));
-
-        JTextField nameField = new JTextField();
-        JButton addProjectButton = new JButton("Add Project");
-
-        addDialog.add(new JLabel("Project Name:"));
-        addDialog.add(nameField);
-
-        addProjectButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String projectName = nameField.getText().trim();
-                if (!projectName.isEmpty()) {
-//                    Project newProject = new Project(UUID.randomUUID().toString(), projectName, "dummy description", new ArrayList<>());
-//                    projects.add(newProject);
-//                    populateFolders();
-//                    selectedProjectId = newProject.getId();
-//                    showTasks(selectedProjectId);
-//
-//                    // Add project to the local SQLite database
-//                    int projectId=addProjectToDatabase(newProject);
-//                    Project newProject = new Project(projectId, projectName, "dummy description", new ArrayList<>());
-//                    projects.add(newProject);
-//                    populateFolders();
-//                    selectedProjectId = newProject.getId();
-//                    showTasks(selectedProjectId);
-//                    addUserProjectEntry(newProject.getId());
-
-
-                    addDialog.dispose();
-                } else {
-                    JOptionPane.showMessageDialog(addDialog, "Project name cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        });
-
-
-//        addProjectButton.addActionListener(new ActionListener() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                String projectName = nameField.getText().trim();
-//                if (!projectName.isEmpty()) {
-//                    Project newProject = new Project(UUID.randomUUID().toString(), projectName, new ArrayList<>());
-//                    projects.add(newProject);
-//                    populateFolders();
-//                    selectedProjectId = newProject.getId();
-//                    showTasks(selectedProjectId);
-//
-//                    // Send HTTP request to the Node.js API
-//                    String apiUrl = "http://localhost:3000/addProject";
-//                    String jsonPayload = "{\"name\":\"" + projectName + "\"}";
-//                    HttpUtil.sendPostRequest(apiUrl, jsonPayload);
-//
-//                    addDialog.dispose();
-//                } else {
-//                    JOptionPane.showMessageDialog(addDialog, "Project name cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
-//                }
-//            }
-//        });
-        addDialog.add(addProjectButton);
-
-        addDialog.setLocationRelativeTo(this);
-        addDialog.setVisible(true);
-    }
-
-
-
-//    private void populateFolders() {
-//        folderPanel.removeAll();
-//        for (Project project : projects) {
-//            JLabel folderLabel = new JLabel(project.getName());
-//            folderLabel.setPreferredSize(new Dimension(150, 100));
-//            folderLabel.setHorizontalAlignment(SwingConstants.CENTER);
-//            folderLabel.setVerticalAlignment(SwingConstants.CENTER);
-//            folderLabel.setOpaque(true);
-//            folderLabel.setBackground(project.getId().equals(selectedProjectId) ? DARK_ORANGE : PRIMARY_COLOR);
-//            folderLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-//            folderLabel.addMouseListener(new java.awt.event.MouseAdapter() {
-//                public void mouseClicked(java.awt.event.MouseEvent evt) {
-//                    selectedProjectId = project.getId();
-//                    populateFolders();  // Refresh folders to update selection
-//                    showTasks(selectedProjectId);
-//                }
-//            });
-//            folderPanel.add(folderLabel);
-//        }
-//        folderPanel.revalidate();
-//        folderPanel.repaint();
-//    }
-
     private void addUserProjectEntry(int projectId) {
         String sql = "INSERT INTO user-projects (userId, projectId, isSelected) VALUES (?, ?, ?)";
         try (Connection conn = DriverManager.getConnection(DB_URL);
@@ -1050,32 +1112,7 @@ public class FolderList extends JFrame {
     }
 
 
-    private int addProjectToDatabase(Project project) {
-        String sql = "INSERT INTO projects (name, description) VALUES (?, ?)";
-        int generatedId = -1; // Default to -1 if the ID is not generated
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            pstmt.setString(1, project.getName());
-            pstmt.setString(2, project.getDescription());
-            pstmt.executeUpdate();
-
-            // Retrieve the generated ID
-            try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
-                if (generatedKeys.next()) {
-                    generatedId = generatedKeys.getInt(1);
-                } else {
-                    throw new SQLException("Creating project failed, no ID obtained.");
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error adding project to database.", "Database Error", JOptionPane.ERROR_MESSAGE);
-        }
-        return generatedId;
-    }
-
-
-    private void populateFolders() {
+    private void populateProjects(List<Project> projects) {
         folderPanel.removeAll();
         for (Project project : projects) {
             // Calculate task counts
@@ -1095,7 +1132,7 @@ public class FolderList extends JFrame {
                     case "Inprogress":
                         inProgressCount++;
                         break;
-                    case "Todo":
+                    case "ToDo":
                         toDoCount++;
                         break;
                 }
@@ -1176,8 +1213,8 @@ public class FolderList extends JFrame {
             folderLabelPanel.addMouseListener(new java.awt.event.MouseAdapter() {
                 public void mouseClicked(java.awt.event.MouseEvent evt) {
                     selectedProjectId = project.getId();
-                    populateFolders();  // Refresh folders to update selection
-                    showTasks(selectedProjectId);
+                    populateProjects(projects);  // Refresh folders to update selection
+                    showTasks(getTasksByProjectId(selectedProjectId));
                 }
             });
 
@@ -1200,19 +1237,20 @@ public class FolderList extends JFrame {
 
 
 
-
-    private void showTasks(int projectId) {
+    public List<Task> getTasksByProjectId(int projectId) {
         Project selectedProject = projects.stream()
                 .filter(p -> p.getId() == projectId)
                 .findFirst()
                 .orElse(null);
 
-        if (selectedProject == null || selectedProject.getTasks().isEmpty()) {
-            JOptionPane.showMessageDialog(null, "No tasks available.", "Information", JOptionPane.INFORMATION_MESSAGE);
-            return;
+        if (selectedProject != null) {
+            return selectedProject.getTasks();
+        } else {
+            return Collections.emptyList(); // Return an empty list if the project is not found
         }
+    }
+    private void showTasks(List<Task> tasks) {
 
-        List<Task> tasks = selectedProject.getTasks();
         String[] columnNames = {"Task", "Description", "Create Date", "Status", "Total Time"};
         Object[][] taskData = new Object[tasks.size()][5];
 
@@ -1284,8 +1322,8 @@ public class FolderList extends JFrame {
 //        taskTable.setSelectionBackground(SEARCH_COLOR); // Set selection background color
         taskTable.setBorder(BorderFactory.createEmptyBorder());
         // ComboBox for Status column
-        JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"To Do", "In Progress", "Completed", "Review"});
-        taskTable.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(statusComboBox));
+//        JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"To Do", "In Progress", "Completed", "Review"});
+//        taskTable.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(statusComboBox));
 
 
         // Set the current task row index
@@ -1328,12 +1366,15 @@ public class FolderList extends JFrame {
         private JLabel taskLabel;
         private JButton startButton;
         private JButton stopButton;
+        private JComboBox<String> statusComboBox;
 
         public TaskCellRenderer() {
             setLayout(new FlowLayout(FlowLayout.LEFT));
             taskLabel = new JLabel();
             startButton = new JButton();
             stopButton = new JButton();
+            statusComboBox = new JComboBox<>(new String[]{"To Do", "In Progress", "Completed", "Review"});
+
 
             // Set the background color to black
             setBackground(PRIMARY_COLOR);
@@ -1372,6 +1413,8 @@ public class FolderList extends JFrame {
             add(startButton);
             add(stopButton);
             add(taskLabel);
+            add(statusComboBox);
+
 
             // Action listeners
             startButton.addActionListener(e -> {
@@ -1393,6 +1436,26 @@ public class FolderList extends JFrame {
                     startButton.setEnabled(true);
                 }
             });
+
+            statusComboBox.addActionListener(e -> {
+                Task task = (Task) statusComboBox.getClientProperty("task");
+                if (task != null) {
+                    String newStatus = (String) statusComboBox.getSelectedItem();
+                    System.out.println("Status changed for task: " + task.getName() + " to: " + newStatus);
+
+                    try {
+                        int taskId = Integer.parseInt(task.getId());
+                        System.out.println("Parsed task ID: " + taskId);
+                        task.setStatus(newStatus); // Update the task status in the application's state
+                        updateTaskStatusInDatabase(taskId, newStatus); // Update the task status in the database
+                    } catch (NumberFormatException nfe) {
+                        System.err.println("Failed to parse task ID: " + task.getId());
+                    }
+                } else {
+                    System.out.println("No task found in the ComboBox property.");
+                }
+            });
+
         }
 
         @Override
@@ -1404,9 +1467,15 @@ public class FolderList extends JFrame {
             startButton.setVisible(!task.isRunning());
             stopButton.setVisible(task.isRunning());
 
+            statusComboBox.setSelectedItem(task.getStatus());
+
+
+
             // Store task reference in buttons
             startButton.putClientProperty("task", task);
             stopButton.putClientProperty("task", task);
+            statusComboBox.putClientProperty("task", task);
+
 
             return this;
         }
@@ -1447,6 +1516,26 @@ public class FolderList extends JFrame {
     //
 
 
+    private void updateTaskStatusInDatabase(int taskId, String newStatus) {
+        String sql = "UPDATE UserTasks SET status = ? WHERE task_id = ? AND user_id = ?";
+        System.out.println("Calling updateTaskStatusInDatabase with taskId: " + taskId + " and newStatus: " + newStatus);
+
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, newStatus);
+            pstmt.setInt(2, taskId);
+            pstmt.setInt(3, user.getUserId());
+
+            int rowsUpdated = pstmt.executeUpdate();
+            System.out.println("Update executed. Rows updated: " + rowsUpdated);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.err.println("SQLException occurred while updating task status: " + e.getMessage());
+        }
+    }
+
 
 
 
@@ -1471,64 +1560,11 @@ public class FolderList extends JFrame {
 
             if (newTask != null) {
                 currentProject.getTasks().add(newTask);
-                showTasks(currentProject.getId());
+                showTasks(getTasksByProjectId(currentProject.getId()));
             }
         }
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-//    private void showAddTaskDialog(Project project) {
-//        JDialog addDialog = new JDialog(this, "Add New Task", true);
-//        addDialog.setSize(300, 150);
-//        addDialog.setLayout(new GridLayout(2, 1));
-//
-//        JTextField nameField = new JTextField();
-//        JButton addTaskButton = new JButton("Add Task");
-//        addTaskButton.setBackground(ADD_PROJECT_COLOR);
-//
-//
-//        addDialog.add(new JLabel("Task Name:"));
-//        addDialog.add(nameField);
-//
-//        addTaskButton.addActionListener(new ActionListener() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                String taskName = nameField.getText().trim();
-//                if (!taskName.isEmpty()) {
-//                    // Assuming default values for the new fields
-//                    String taskId = UUID.randomUUID().toString();
-//                    String taskName2 = "New Task"; // Replace with actual task name input
-//                    String taskDescription = "Description of the new task"; // Replace with actual description input
-//                    String taskCreateDate = "2024-07-25"; // Current date or another date input
-//                    String taskStatus = "Open"; // Default status or another status input
-//                    String taskDuration = "00:00:00"; // Default duration
-//
-//                    Task newTask = new Task(taskId, taskName2, taskDescription, taskCreateDate, taskStatus, taskDuration);
-//
-//                    project.getTasks().add(newTask);
-//                    showTasks(project.getId());
-//                    addDialog.dispose();
-//                } else {
-//                    JOptionPane.showMessageDialog(addDialog, "Task name cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
-//                }
-//            }
-//        });
-//        addDialog.add(addTaskButton);
-//
-//        addDialog.setLocationRelativeTo(this);
-//        addDialog.setVisible(true);
-//    }
 
     private void startTimer(Task task) {
 //        initializeOrUpdateDatabase();
@@ -1575,17 +1611,8 @@ public class FolderList extends JFrame {
 //        currentTaskDetailsLabel.setText("No task running");
 
         // Refresh task list or table to update button states
-        showTasks(selectedProjectId);
+        showTasks(getTasksByProjectId(selectedProjectId));
     }
-
-
-//    private void updateTimeSpent() {
-//        if (currentTask != null) {
-//            currentTask.incrementTimeSpent();
-//            currentTaskDetailsLabel.setText(currentProject.getName() + " - " + currentTask.getName() + " - Time Spent: " + currentTask.getTimeSpent());
-//            showTasks(selectedProjectId);  // Refresh task list to update time spent
-//        }
-//    }
 
 
     private void updateTimeSpent() {
@@ -1636,62 +1663,6 @@ public class FolderList extends JFrame {
         }
     }
 
-
-
-//    private void initializeOrUpdateDatabase() {
-//        try {
-//            Class.forName("org.sqlite.JDBC"); // Load the SQLite JDBC driver
-//            try (Connection conn = DriverManager.getConnection(DB_URL)) {
-//                if (conn != null) {
-//                    try (Statement stmt = conn.createStatement()) {
-//                        // Create the tasks table if it does not exist
-//                        String createTableSQL = "CREATE TABLE IF NOT EXISTS Tasks (" +
-//                                "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-//                                "timeStamp INTEGER," +
-//                                "isRunning INTEGER," +
-//                                "timeSpent INTEGER)";
-//                        stmt.execute(createTableSQL);
-//                        System.out.println("Database and tasks table initialized.");
-//
-//                        if (currentTask != null) {
-//                            // Ensure currentTask is initialized and has an ID
-//                            String taskIdString = currentTask.getId();
-//                            int taskId;
-//                            try {
-//                                taskId = Integer.parseInt(taskIdString);
-//                            } catch (NumberFormatException e) {
-//                                System.err.println("Error converting task ID to integer: " + e.getMessage());
-//                                return; // Exit the method if the ID is invalid
-//                            }
-//
-//                            // Set all tasks to not running
-//                            String updateAllTasksSQL = "UPDATE tasks SET isRunning = 0 WHERE isRunning = 1";
-//                            try (PreparedStatement pstmt = conn.prepareStatement(updateAllTasksSQL)) {
-//                                pstmt.executeUpdate();
-//                            }
-//
-//                            // Check if the task already exists in the database
-//                            String checkTaskSQL = "SELECT COUNT(*) FROM tasks WHERE id = ?";
-//                            try (PreparedStatement checkPstmt = conn.prepareStatement(checkTaskSQL)) {
-//                                checkPstmt.setInt(1, taskId);
-//                                try (ResultSet rs = checkPstmt.executeQuery()) {
-//                                    if (rs.next() && rs.getInt(1) > 0) {
-//                                        // Task exists, update the record
-//                                        updateTaskRecord(conn, taskId);
-//                                    } else {
-//                                        // Task does not exist, insert a new record
-//                                        insertTaskRecord(conn, taskId);
-//                                    }
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//        } catch (ClassNotFoundException | SQLException e) {
-//            System.err.println("Error initializing or updating database: " + e.getMessage());
-//        }
-//    }
 
     private void initializeOrUpdateDatabase() {
         try {
@@ -1820,52 +1791,6 @@ public class FolderList extends JFrame {
     }
 
 
-//    private void updateTaskRecord(Connection conn, int taskId) {
-//        try {
-//            String sql = "UPDATE UserTasks SET time_stamp = ?, is_running = ?, time_spent = ? WHERE id = ?";
-//            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-//                long currentTimeStamp = System.currentTimeMillis() / 1000; // timestamp in seconds
-//                int timeSpent = convertTimeStringToSeconds(currentTask.getTimeSpent());
-//
-//                pstmt.setLong(1, currentTimeStamp);
-//                pstmt.setInt(2, currentTask.isRunning() ? 1 : 0);
-//                pstmt.setInt(3, timeSpent);
-//                pstmt.setInt(4, taskId); // Set the task ID to identify the record to update
-//
-//                int rowsAffected = pstmt.executeUpdate();
-//                if (rowsAffected > 0) {
-//                    System.out.println("Database updated successfully.");
-//                } else {
-//                    System.out.println("No rows updated in the database. Check if the task ID exists.");
-//                }
-//            }
-//        } catch (SQLException e) {
-//            System.err.println("Error updating task record: " + e.getMessage());
-//        }
-//    }
-//
-//    private void insertTaskRecord(Connection conn, int taskId) {
-//        try {
-//            String sql = "INSERT INTO UserTasks (id, time_stamp, is_running, time_spent) VALUES (?, ?, ?, ?)";
-//            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-//                long currentTimeStamp = System.currentTimeMillis() / 1000; // timestamp in seconds
-//
-//                pstmt.setInt(1, taskId); // Set task ID
-//                pstmt.setLong(2, currentTimeStamp); // Set current timestamp
-//                pstmt.setInt(3, currentTask.isRunning() ? 1 : 0); // Set running status
-//                pstmt.setInt(4, 0); // Set timeSpent to 0
-//
-//                int rowsAffected = pstmt.executeUpdate();
-//                if (rowsAffected > 0) {
-//                    System.out.println("Task record initialized in the database.");
-//                } else {
-//                    System.out.println("No rows inserted into the database.");
-//                }
-//            }
-//        } catch (SQLException e) {
-//            System.err.println("Error inserting task record: " + e.getMessage());
-//        }
-//    }
 
 
 
@@ -2026,11 +1951,4 @@ public class FolderList extends JFrame {
 //        currentTaskPanel.setBounds(20, 10, frameWidth - 180, 80);
     }
 
-//    public static void main(String[] args) {
-//        SwingUtilities.invokeLater(new Runnable() {
-//            public void run() {
-//                new FolderList();
-//            }
-//        });
-//    }
 }
