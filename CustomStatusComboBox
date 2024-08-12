@@ -1,0 +1,89 @@
+package org.example;
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.plaf.basic.BasicComboBoxUI;
+import javax.swing.plaf.basic.BasicComboPopup;
+import javax.swing.plaf.basic.ComboPopup;
+import java.awt.*;
+
+public class CustomStatusComboBox extends JComboBox<String> {
+    public CustomStatusComboBox() {
+        setModel(new DefaultComboBoxModel<>(new String[]{"Completed", "ToDo", "InProgress", "Review"}));
+        setRenderer(new StatusRenderer());
+        setUI(new CustomComboBoxUI());
+    }
+
+    private static class StatusRenderer extends JLabel implements ListCellRenderer<String> {
+        public StatusRenderer() {
+            setOpaque(true);
+            setFont(new Font("Arial", Font.BOLD, 14)); // Adjust font style and size
+            setBorder(new EmptyBorder(5, 5, 5, 5)); // Add padding to the text
+        }
+
+        @Override
+        public Component getListCellRendererComponent(JList<? extends String> list, String value, int index, boolean isSelected, boolean cellHasFocus) {
+            setText(value);
+
+            switch (value) {
+                case "Completed":
+                    setBackground(new Color(52, 199, 89)); // Green
+                    setForeground(Color.WHITE);
+                    break;
+                case "ToDo":
+                    setBackground(new Color(255, 69, 58)); // Red
+                    setForeground(Color.WHITE);
+                    break;
+                case "InProgress":
+                    setBackground(new Color(0, 122, 255)); // Blue
+                    setForeground(Color.WHITE);
+                    break;
+                case "Review":
+                    setBackground(new Color(255, 149, 0)); // Orange
+                    setForeground(Color.WHITE);
+                    break;
+                default:
+                    setBackground(list.getBackground());
+                    setForeground(list.getForeground());
+                    break;
+            }
+
+            if (isSelected) {
+                setBackground(getBackground().darker());
+            }
+
+            return this;
+        }
+    }
+
+    private static class CustomComboBoxUI extends BasicComboBoxUI {
+        @Override
+        protected JButton createArrowButton() {
+            JButton arrowButton = new JButton("▼");
+            arrowButton.setBorder(BorderFactory.createEmptyBorder());
+            arrowButton.setContentAreaFilled(false);
+            arrowButton.setForeground(Color.GREEN); // Set arrow color
+            return arrowButton;
+        }
+
+        @Override
+        protected ComboPopup createPopup() {
+            BasicComboPopup popup = (BasicComboPopup) super.createPopup();
+            popup.setBorder(BorderFactory.createLineBorder(Color.GRAY)); // Set border color
+            popup.setBackground(new Color(18, 32, 47)); // Dark background
+            return popup;
+        }
+    }
+
+//    public static void main(String[] args) {
+//        JFrame frame = new JFrame("Custom JComboBox");
+//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//        frame.setSize(600, 300);
+//        frame.setLayout(new FlowLayout());
+//
+//        CustomStatusComboBox comboBox = new CustomStatusComboBox();
+//        frame.add(comboBox);
+//
+//        frame.setVisible(true);
+//    }
+}

@@ -21,6 +21,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellEditor;
+
 
 import java.awt.Toolkit;
 import java.util.stream.Collectors;
@@ -1129,7 +1131,7 @@ public class FolderList extends JFrame {
                     case "Review":
                         reviewCount++;
                         break;
-                    case "Inprogress":
+                    case "InProgress":
                         inProgressCount++;
                         break;
                     case "ToDo":
@@ -1249,8 +1251,33 @@ public class FolderList extends JFrame {
             return Collections.emptyList(); // Return an empty list if the project is not found
         }
     }
-    private void showTasks(List<Task> tasks) {
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
 
+
+    private void showTasks(List<Task> tasks) {
         String[] columnNames = {"Task", "Description", "Create Date", "Status", "Total Time"};
         Object[][] taskData = new Object[tasks.size()][5];
 
@@ -1274,6 +1301,25 @@ public class FolderList extends JFrame {
                 if (column == 0) return Task.class; // Custom class for task column
                 return String.class;
             }
+
+            @Override
+            public void setValueAt(Object aValue, int row, int column) {
+                if (column == 3) { // Status column
+                    Task task = (Task) getValueAt(row, 0); // Assuming Task object is in column 0
+                    String newStatus = (String) aValue;
+                    task.setStatus(newStatus);
+                    // Update the database with the new status
+                    try {
+                        int taskId = Integer.parseInt(task.getId());
+                        updateTaskStatusInDatabase(taskId, newStatus);
+                    } catch (NumberFormatException nfe) {
+                        System.err.println("Failed to parse task ID: " + task.getId());
+                    }
+                    fireTableCellUpdated(row, column);
+                } else {
+                    super.setValueAt(aValue, row, column);
+                }
+            }
         };
 
         taskTable = new JTable(tableModel);
@@ -1288,12 +1334,12 @@ public class FolderList extends JFrame {
                 label.setBackground(PRIMARY_COLOR); // Set header background color to black
                 label.setForeground(Color.WHITE); // Set header text color to white
                 label.setHorizontalAlignment(SwingConstants.CENTER); // Center-align header text
-
                 label.setBorder(BorderFactory.createEmptyBorder(10, 5, 10, 5)); // Add padding to header
                 return label;
             }
         });
 
+        // Set cell renderer for other columns
         taskTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
@@ -1309,22 +1355,22 @@ public class FolderList extends JFrame {
         // Custom renderer and editor for the Task column
         taskTable.getColumnModel().getColumn(0).setCellRenderer(new TaskCellRenderer());
         taskTable.getColumnModel().getColumn(0).setCellEditor(new TaskCellEditor());
-        taskTable.getColumnModel().getColumn(0).setPreferredWidth(300); // Adjust width for Task column if needed
-        taskTable.setRowHeight(40); // Set row height to accommodate buttons and label
-        taskTable.getColumnModel().getColumn(0).setPreferredWidth(100); // Set width for the first column
-        taskTable.getColumnModel().getColumn(1).setPreferredWidth(200); // Set width for the second column
 
+        // Custom renderer and editor for the Status column
+        taskTable.getColumnModel().getColumn(3).setCellRenderer(new StatusCellRenderer());
+        taskTable.getColumnModel().getColumn(3).setCellEditor(new StatusCellEditor());
+
+        // Set preferred widths and row height
+        taskTable.getColumnModel().getColumn(0).setPreferredWidth(300); // Adjust width for Task column
+        taskTable.getColumnModel().getColumn(1).setPreferredWidth(200); // Set width for Description column
+        taskTable.getColumnModel().getColumn(3).setPreferredWidth(150); // Set width for Status column
+        taskTable.setRowHeight(40); // Set row height to accommodate buttons and labels
 
         // Set table properties
         taskTable.setBackground(PRIMARY_COLOR); // Set background color for empty areas of the table
         taskTable.setForeground(Color.WHITE); // Set default text color
         taskTable.setGridColor(SECONDARY_COLOR); // Set grid line color
-//        taskTable.setSelectionBackground(SEARCH_COLOR); // Set selection background color
         taskTable.setBorder(BorderFactory.createEmptyBorder());
-        // ComboBox for Status column
-//        JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"To Do", "In Progress", "Completed", "Review"});
-//        taskTable.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(statusComboBox));
-
 
         // Set the current task row index
         if (currentTask != null) {
@@ -1345,36 +1391,18 @@ public class FolderList extends JFrame {
     }
 
 
-//
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
 
     // Custom cell renderer for Task column
     private class TaskCellRenderer extends JPanel implements TableCellRenderer {
         private JLabel taskLabel;
         private JButton startButton;
         private JButton stopButton;
-        private JComboBox<String> statusComboBox;
 
         public TaskCellRenderer() {
             setLayout(new FlowLayout(FlowLayout.LEFT));
             taskLabel = new JLabel();
             startButton = new JButton();
             stopButton = new JButton();
-            statusComboBox = new JComboBox<>(new String[]{"To Do", "In Progress", "Completed", "Review"});
-
 
             // Set the background color to black
             setBackground(PRIMARY_COLOR);
@@ -1413,8 +1441,6 @@ public class FolderList extends JFrame {
             add(startButton);
             add(stopButton);
             add(taskLabel);
-            add(statusComboBox);
-
 
             // Action listeners
             startButton.addActionListener(e -> {
@@ -1436,26 +1462,6 @@ public class FolderList extends JFrame {
                     startButton.setEnabled(true);
                 }
             });
-
-            statusComboBox.addActionListener(e -> {
-                Task task = (Task) statusComboBox.getClientProperty("task");
-                if (task != null) {
-                    String newStatus = (String) statusComboBox.getSelectedItem();
-                    System.out.println("Status changed for task: " + task.getName() + " to: " + newStatus);
-
-                    try {
-                        int taskId = Integer.parseInt(task.getId());
-                        System.out.println("Parsed task ID: " + taskId);
-                        task.setStatus(newStatus); // Update the task status in the application's state
-                        updateTaskStatusInDatabase(taskId, newStatus); // Update the task status in the database
-                    } catch (NumberFormatException nfe) {
-                        System.err.println("Failed to parse task ID: " + task.getId());
-                    }
-                } else {
-                    System.out.println("No task found in the ComboBox property.");
-                }
-            });
-
         }
 
         @Override
@@ -1467,19 +1473,165 @@ public class FolderList extends JFrame {
             startButton.setVisible(!task.isRunning());
             stopButton.setVisible(task.isRunning());
 
-            statusComboBox.setSelectedItem(task.getStatus());
-
-
-
             // Store task reference in buttons
             startButton.putClientProperty("task", task);
             stopButton.putClientProperty("task", task);
-            statusComboBox.putClientProperty("task", task);
-
 
             return this;
         }
     }
+
+    private class StatusCellRenderer extends JPanel implements TableCellRenderer {
+        private CustomStatusComboBox statusComboBox;
+
+        public StatusCellRenderer() {
+            setLayout(new FlowLayout(FlowLayout.LEFT));
+            statusComboBox = new CustomStatusComboBox();
+
+            // Set the background color to black or primary color
+            setBackground(PRIMARY_COLOR);
+            statusComboBox.setForeground(Color.WHITE); // Set text color to white for better contrast
+
+            add(statusComboBox);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            if (value instanceof String) {
+                statusComboBox.setSelectedItem(value);
+
+                // Get the Task object from the first column
+                Task task = (Task) table.getValueAt(row, 0);
+                statusComboBox.putClientProperty("task", task);
+            } else {
+                // Handle unexpected value types
+                System.err.println("Unexpected value type: " + (value != null ? value.getClass().getName() : "null"));
+                statusComboBox.setSelectedItem(null); // Clear selection or set to default
+                statusComboBox.putClientProperty("task", null);
+            }
+
+            // Handle selection and focus styles
+            if (isSelected) {
+                setBackground(table.getSelectionBackground());
+                statusComboBox.setForeground(table.getSelectionForeground());
+            } else {
+                setBackground(table.getBackground());
+                statusComboBox.setForeground(Color.WHITE); // Ensure consistent text color
+            }
+
+            setOpaque(true);
+            return this;
+        }
+    }
+
+
+//    private class StatusCellRenderer extends JPanel implements TableCellRenderer {
+//        private CustomStatusComboBox statusComboBox;
+//
+//        public StatusCellRenderer() {
+//            setLayout(new FlowLayout(FlowLayout.LEFT));
+////            statusComboBox = new JComboBox<>(new String[]{"ToDo", "InProgress", "Completed", "Review"});
+//
+//            // Set the background color to black
+//            setBackground(PRIMARY_COLOR);
+//            statusComboBox.setForeground(Color.WHITE); // Set text color to white for better contrast
+//
+//            add(statusComboBox);
+//        }
+//
+//        @Override
+//        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+//            if (value instanceof String) {
+//                statusComboBox.setSelectedItem(value);
+//
+//                // Get the Task object from the first column
+//                Task task = (Task) table.getValueAt(row, 0);
+//                statusComboBox.putClientProperty("task", task);
+//            } else {
+//                // Handle unexpected value types
+//                System.err.println("Unexpected value type: " + (value != null ? value.getClass().getName() : "null"));
+//                statusComboBox.setSelectedItem(null); // Clear selection or set to default
+//                statusComboBox.putClientProperty("task", null);
+//            }
+//
+//            // Handle selection and focus styles
+//            if (isSelected) {
+//                setBackground(table.getSelectionBackground());
+//                statusComboBox.setForeground(table.getSelectionForeground());
+//            } else {
+//                setBackground(table.getBackground());
+//                statusComboBox.setForeground(Color.WHITE); // Ensure consistent text color
+//            }
+//
+//            setOpaque(true);
+//            return this;
+//        }
+//    }
+
+
+//    private class StatusCellRenderer extends JPanel implements TableCellRenderer {
+//        private JComboBox<String> statusComboBox;
+//
+//        public StatusCellRenderer() {
+//            setLayout(new FlowLayout(FlowLayout.LEFT));
+//            statusComboBox = new JComboBox<>(new String[]{"ToDo", "InProgress", "Completed", "Review"});
+//
+//            // Set the background color to black
+//            setBackground(PRIMARY_COLOR);
+//            statusComboBox.setForeground(Color.WHITE); // Set text color to white for better contrast
+//
+//            add(statusComboBox);
+//
+//            statusComboBox.addActionListener(e -> {
+//                System.out.println("ComboBox ActionListener invoked."); // Debug statement
+//                Task task = (Task) statusComboBox.getClientProperty("task");
+//                if (task != null) {
+//                    String newStatus = (String) statusComboBox.getSelectedItem();
+//                    System.out.println("Status changed for task: " + task.getName() + " to: " + newStatus);
+//
+//                    try {
+//                        int taskId = Integer.parseInt(task.getId());
+//                        System.out.println("Parsed task ID: " + taskId);
+//                        task.setStatus(newStatus); // Update the task status in the application's state
+//                        updateTaskStatusInDatabase(taskId, newStatus); // Update the task status in the database
+//                    } catch (NumberFormatException nfe) {
+//                        System.err.println("Failed to parse task ID: " + task.getId());
+//                    }
+//                } else {
+//                    System.out.println("No task found in the ComboBox property.");
+//                }
+//            });
+//        }
+//
+//        @Override
+//        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+//            if (value instanceof Task) {
+//                Task task = (Task) value;
+//                statusComboBox.setSelectedItem(task.getStatus());
+//
+//                // Store task reference in ComboBox
+//                statusComboBox.putClientProperty("task", task);
+//            } else {
+//                // Handle unexpected value types
+//                System.err.println("Unexpected value type: " + (value != null ? value.getClass().getName() : "null"));
+//                statusComboBox.setSelectedItem(null); // Clear selection or set to default
+//                statusComboBox.putClientProperty("task", null);
+//            }
+//
+//            // Handle selection and focus styles
+//            if (isSelected) {
+//                setBackground(table.getSelectionBackground());
+//                statusComboBox.setForeground(table.getSelectionForeground());
+//            } else {
+//                setBackground(table.getBackground());
+//                statusComboBox.setForeground(Color.WHITE); // Ensure consistent text color
+//            }
+//
+//            setOpaque(true);
+//            return this;
+//        }
+//    }
+
 
     // Custom cell editor for Task column
     private class TaskCellEditor extends AbstractCellEditor implements TableCellEditor {
@@ -1497,11 +1649,65 @@ public class FolderList extends JFrame {
 
         @Override
         public Object getCellEditorValue() {
-            return null; // Not used in this context
+            return null; // Return null since we don't need to modify the actual value in the table model
+        }
+    }
+
+    private class StatusCellEditor extends AbstractCellEditor implements TableCellEditor {
+
+        private CustomStatusComboBox comboBox;
+
+        public StatusCellEditor() {
+            comboBox = new CustomStatusComboBox();
+            comboBox.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    fireEditingStopped(); // Notify that editing is complete
+                }
+            });
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            return comboBox.getSelectedItem();
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
+            comboBox.setSelectedItem(value);
+            return comboBox;
         }
     }
 
 
+//    private class StatusCellEditor extends AbstractCellEditor implements TableCellEditor {
+//
+//        private CustomStatusComboBox comboBox;
+//        public StatusCellEditor() {
+//            comboBox = new CustomStatusComboBox();
+////            comboBox = new JComboBox<>(new String[]{"ToDo", "InProgress", "Completed", "Review"}); // Match options with renderer
+//            comboBox.addActionListener(new ActionListener() {
+//                @Override
+//                public void actionPerformed(ActionEvent e) {
+//                    fireEditingStopped(); // Notify that editing is complete
+//                }
+//            });
+//        }
+//
+//        @Override
+//        public Object getCellEditorValue() {
+//            return comboBox.getSelectedItem();
+//        }
+//
+//        @Override
+//        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
+//            comboBox.setSelectedItem(value);
+//            return comboBox;
+//        }
+//    }
+
+
+
     //
     //
     //
@@ -1514,6 +1720,19 @@ public class FolderList extends JFrame {
     //
     //
     //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+
 
 
     private void updateTaskStatusInDatabase(int taskId, String newStatus) {

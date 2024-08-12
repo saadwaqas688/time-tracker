@@ -8,36 +8,66 @@ import java.sql.Timestamp;
 
 public class SeedingDataBaseTwo {
 
-    public static void main(String[] args) {
-        Connection conn = null;
+//    public static void main(String[] args) {
+//        Connection conn = null;
+//
+//        try {
+//            // Connect to the SQLite database (or create it if it doesn't exist)
+//            String url = "jdbc:sqlite:app.db";
+//            conn = DriverManager.getConnection(url);
+//
+//            if (conn != null) {
+//                // Create tables
+//                createTables(conn);
+//
+//                // Insert data
+//                insertData(conn);
+//
+//                System.out.println("Database setup completed successfully.");
+//            }
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        } finally {
+//            try {
+//                if (conn != null) {
+//                    conn.close();
+//                }
+//            } catch (Exception ex) {
+//                ex.printStackTrace();
+//            }
+//        }
+//    }
+public void run() {
+    Connection conn = null;
 
+    try {
+        // Connect to the SQLite database (or create it if it doesn't exist)
+        String url = "jdbc:sqlite:app.db";
+        conn = DriverManager.getConnection(url);
+
+        if (conn != null) {
+            // Create tables
+            createTables(conn);
+
+            // Insert data
+            insertData(conn);
+
+            System.out.println("Database setup completed successfully.");
+        }
+
+    } catch (Exception e) {
+        e.printStackTrace();
+    } finally {
         try {
-            // Connect to the SQLite database (or create it if it doesn't exist)
-            String url = "jdbc:sqlite:app.db";
-            conn = DriverManager.getConnection(url);
-
             if (conn != null) {
-                // Create tables
-                createTables(conn);
-
-                // Insert data
-                insertData(conn);
-
-                System.out.println("Database setup completed successfully.");
+                conn.close();
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
     }
+}
 
     private static void createTables(Connection conn) throws Exception {
         String createTasksTable = "CREATE TABLE IF NOT EXISTS Tasks ("
@@ -139,22 +169,22 @@ public class SeedingDataBaseTwo {
         try (PreparedStatement pstmt = conn.prepareStatement(insertUser)) {
             pstmt.setString(1, "John");
             pstmt.setString(2, "Doe");
-            pstmt.setString(3, "john.doe@example.com");
-            pstmt.setString(4, "password123");
+            pstmt.setString(3, "first");
+            pstmt.setString(4, "p1");
             pstmt.setString(5, "employee");
             pstmt.executeUpdate();
 
             pstmt.setString(1, "Jane");
             pstmt.setString(2, "Smith");
-            pstmt.setString(3, "jane.smith@example.com");
-            pstmt.setString(4, "password456");
+            pstmt.setString(3, "second");
+            pstmt.setString(4, "p2");
             pstmt.setString(5, "manager");
             pstmt.executeUpdate();
 
             pstmt.setString(1, "Bob");
             pstmt.setString(2, "Johnson");
-            pstmt.setString(3, "bob.johnson@example.com");
-            pstmt.setString(4, "password789");
+            pstmt.setString(3, "third");
+            pstmt.setString(4, "p3");
             pstmt.setString(5, "admin");
             pstmt.executeUpdate();
         }
