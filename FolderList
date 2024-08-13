@@ -43,6 +43,8 @@ public class FolderList extends JFrame {
     private long lastDatabaseUpdateForGlobalTimer = 0; // Field to track the last database update time
 
     private static final long UPDATE_INTERVAL_MS = 10000;
+    private static final long IDLE_TIME_TRACKING = 300000;
+
     private static final String DB_URL = "jdbc:sqlite:app.db";
 
 
@@ -107,6 +109,8 @@ public class FolderList extends JFrame {
     private GlobalEventListener listener;
     private boolean isDefaultSelectedTaskRunning;
     private User user;
+    private final StatusWindow statusWindow = new StatusWindow(this);
+
 
     FolderList(User user) {
 
@@ -207,9 +211,175 @@ public class FolderList extends JFrame {
 
         if (currentTask != null) {
             startTimer(currentTask);
+            statusWindow.setVisible(true);
         }
 
     }
+    private static class StatusWindow extends JDialog {
+        private final JLabel statusLabel = new JLabel("No task is running");
+        private final JButton startButton = new JButton();
+        private final JButton stopButton = new JButton();
+        private final FolderList outerClassInstance;  // Reference to outer class
+
+
+        StatusWindow(FolderList outerClassInstance) {
+
+            this.outerClassInstance = outerClassInstance;  // Initialize reference
+
+            setTitle("Task Status");
+            // Convert inches to pixels
+            int widthInPixels = (int) (8 * 96);  // 4 inches to provide more width
+            int heightInPixels = (int) (1 * 96);  // 0.5 inches
+
+            setSize(widthInPixels, heightInPixels);
+            setLayout(new FlowLayout(FlowLayout.LEFT)); // Use FlowLayout to arrange buttons and label
+
+            // Set background color to black and text color to white
+            getContentPane().setBackground(Color.BLACK);
+            statusLabel.setForeground(Color.WHITE);
+
+            // Load icons (adjust paths and sizes as needed)
+            ImageIcon startIcon = loadImageIcon("icons/small-start-icon.png", 30, 30);
+            ImageIcon stopIcon = loadImageIcon("icons/small-pause-con.png", 30, 30);
+
+            if (startIcon != null) {
+                startButton.setIcon(startIcon);
+            }
+            if (stopIcon != null) {
+                stopButton.setIcon(stopIcon);
+            }
+
+            // Remove button text and set preferred size
+            startButton.setText(null);
+            stopButton.setText(null);
+            startButton.setPreferredSize(new Dimension(30, 30));
+            stopButton.setPreferredSize(new Dimension(30, 30));
+            startButton.setBorderPainted(false);  // Remove the button border
+            stopButton.setBorderPainted(false);   // Remove the button border
+            startButton.setOpaque(true);
+            startButton.setContentAreaFilled(true);
+            stopButton.setOpaque(true);
+            stopButton.setContentAreaFilled(true);
+
+            // Set button background color
+            startButton.setBackground(Color.BLACK);
+            stopButton.setBackground(Color.BLACK);
+
+            startButton.setEnabled(true);
+            stopButton.setEnabled(false);
+            startButton.setVisible(true);
+            stopButton.setVisible(false);
+
+//            if(outerClassInstance.currentTask!=null){
+//                startButton.setEnabled(!outerClassInstance.currentTask.isRunning());
+//                stopButton.setEnabled(outerClassInstance.currentTask.isRunning());
+//                startButton.setVisible(!outerClassInstance.currentTask.isRunning());
+//                stopButton.setVisible(outerClassInstance.currentTask.isRunning());
+//            }
+
+
+            // Initial state
+//            stopButton.setEnabled(false);
+
+            // Action listeners
+//            startButton.addActionListener(e -> {
+//                // Logic to start the task
+//                startButton.setEnabled(false);
+//                stopButton.setEnabled(true);
+//                updateStatus("Task is running"); // Update the status label
+//            });
+//
+//            stopButton.addActionListener(e -> {
+//                // Logic to stop the task
+//                stopButton.setEnabled(false);
+//                startButton.setEnabled(true);
+//                updateStatus("Task is stopped"); // Update the status label
+//            });
+            startButton.addActionListener(e -> {
+                if (outerClassInstance.currentTask != null) {
+                    outerClassInstance.startTimer(outerClassInstance.currentTask);
+                    outerClassInstance.currentTask.setRunning(true);
+                    startButton.setEnabled(false);
+                    stopButton.setEnabled(true);
+                    startButton.setVisible(false);
+                    stopButton.setVisible(true);
+//                    updateStatus("stop");
+                }
+            });
+
+            stopButton.addActionListener(e -> {
+                if (outerClassInstance.currentTask != null) {
+                    outerClassInstance.stopTimer();
+                    outerClassInstance.currentTask.setRunning(false);
+                    startButton.setEnabled(true);
+                    stopButton.setEnabled(false);
+                    startButton.setVisible(true);
+                    stopButton.setVisible(false);
+//                    updateStatus("start");
+                }
+            });
+
+            add(startButton);
+            add(stopButton);
+            add(statusLabel);
+
+            setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+            setLocationRelativeTo(null); // Center on the screen
+            setAlwaysOnTop(true); // Keep the status window on top
+        }
+
+        void updateStatus(String status,Task task) {
+            if(task!=null){
+                startButton.setEnabled(!task.isRunning());
+                stopButton.setEnabled(task.isRunning());
+                startButton.setVisible(!task.isRunning());
+                stopButton.setVisible(task.isRunning());
+            }
+
+            statusLabel.setText(status);
+            statusLabel.revalidate(); // Ensure the layout is updated
+            statusLabel.repaint();    // Repaint the component to reflect changes
+        }
+    }
+
+
+    private void updateStatusWindow() {
+        String status = currentTask != null ? "  "+currentTask.getName() +"-"+ "Time Spent: " + currentTask.getTimeSpent() + " s" :
+                "No task is running";
+        statusWindow.updateStatus(status,currentTask);
+    }
+//
+//    private static class StatusWindow extends JDialog {
+//        private final JLabel statusLabel = new JLabel("No task is running");
+//
+//        StatusWindow() {
+//            setTitle("Task Status");
+//            // Convert inches to pixels
+//            int widthInPixels = (int) (8 * 96);  // 4 inches to provide more width
+//            int heightInPixels = (int) (1 * 96);  // 0.5 inches
+//
+//            setSize(widthInPixels, heightInPixels);
+//            setLayout(new BorderLayout());
+//
+//            // Set background color to black and text color to white
+//            getContentPane().setBackground(Color.BLACK);
+//            statusLabel.setForeground(Color.WHITE);
+//
+//
+//            add(statusLabel, BorderLayout.CENTER);
+//            setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+//            setLocationRelativeTo(null); // Center on the screen
+//            setAlwaysOnTop(true); // Keep the status window on top
+//        }
+//
+//
+//        void updateStatus(String status) {
+//            statusLabel.setText(status);
+//            statusLabel.revalidate(); // Ensure the layout is updated
+//            statusLabel.repaint();    // Repaint the component to reflect changes
+//        }
+//
+//    }
 
     private JPanel createCenterPanel() {
         JPanel centerPanel = new JPanel();
@@ -1785,7 +1955,7 @@ public class FolderList extends JFrame {
     }
 
 
-    private void startTimer(Task task) {
+    public void startTimer(Task task) {
 //        initializeOrUpdateDatabase();
         System.out.println("Start timer: " + task.getName());
 
@@ -1816,6 +1986,7 @@ public class FolderList extends JFrame {
                 SwingUtilities.invokeLater(() -> updateTimeSpent());
             }
         }, 1000, 1000);
+
     }
 
     private void stopTimer() {
@@ -1858,6 +2029,8 @@ public class FolderList extends JFrame {
                 }
                 lastDatabaseUpdate = currentTime;
             }
+
+            updateStatusWindow();
         }
     }
 
@@ -2069,7 +2242,7 @@ public class FolderList extends JFrame {
                 long idleTime = listener.getIdleTime();
                 System.out.println("Idle Time: " + idleTime / 1000 + " seconds");
 
-                if (idleTime >= 5000000) {  // 15 seconds idle time
+                if (idleTime >=IDLE_TIME_TRACKING) {  // 15 seconds idle time
                     idleTimer.cancel();  // Stop further checks during the countdown
                     SwingUtilities.invokeLater(() -> showIdleAlert());
                 }

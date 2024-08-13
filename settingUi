@@ -1,0 +1,152 @@
+package org.example;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+public class SettingsUI extends JFrame {
+
+    public SettingsUI() {
+        // Frame properties
+        setTitle("Settings");
+        setSize(900, 800);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        // Main panel with dark background
+        JPanel mainPanel = new JPanel();
+        mainPanel.setBackground(new Color(12, 42, 56));
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Title label
+        JLabel titleLabel = new JLabel("Settings");
+        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 20));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        mainPanel.add(titleLabel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+
+// Checkboxes
+        JCheckBox autoStartCheckBox = createCheckBox("Auto start clocklog app on startup");
+        JCheckBox hideAppCheckBox = createCheckBox("Hide Desktop app");
+        JCheckBox screenshotNotificationCheckBox = createCheckBox("Screenshot Notification");
+        JCheckBox timeTrackingReminderCheckBox = createCheckBox("Time Tracking Reminder");
+
+// ComboBox for "Show In"
+        JLabel showInLabel = createLabel("Show In");
+        JComboBox<String> showInComboBox = new JComboBox<>(new String[]{"Select", "System Tray", "Taskbar"});
+        showInComboBox.setBackground(new Color(12, 42, 56));
+        showInComboBox.setForeground(Color.WHITE);
+        showInComboBox.setPreferredSize(new Dimension(50, 30));
+        showInComboBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+// Spinner for "Time Tracking Reminder Interval"
+        JLabel timeTrackingLabel = createLabel("Remind me to track time after");
+        JSpinner timeTrackingSpinner = new JSpinner(new SpinnerNumberModel(5, 1, 60, 1));
+        JLabel minutesLabel = createLabel("min of Inactivity.");
+
+// ComboBox for "Time Zone"
+        JLabel timeZoneLabel = createLabel("Time Zone");
+        JComboBox<String> timeZoneComboBox = new JComboBox<>(new String[]{"Select", "UTC+05:00 Islamabad, Karachi"});
+        timeZoneComboBox.setBackground(new Color(12, 42, 56));
+        timeZoneComboBox.setForeground(Color.WHITE);
+        timeZoneComboBox.setPreferredSize(new Dimension(50, 30));
+        timeZoneComboBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+// Language Options
+        JLabel languageLabel = createLabel("Language");
+        JPanel languagePanel = new JPanel();
+        languagePanel.setBackground(new Color(12, 42, 56));
+        languagePanel.setLayout(new GridLayout(2, 4, 10, 10));
+        languagePanel.add(createRadioButton("English"));
+        languagePanel.add(createRadioButton("Español"));
+        languagePanel.add(createRadioButton("Portuguese"));
+        languagePanel.add(createRadioButton("French"));
+        languagePanel.add(createRadioButton("Hindi"));
+        languagePanel.add(createRadioButton("Arabic"));
+        languagePanel.add(createRadioButton("Mandarin"));
+        languagePanel.add(createRadioButton("Russian"));
+        languagePanel.add(createRadioButton("Indonesian"));
+        languagePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+// Save Button
+        JButton saveButton = new JButton("Save");
+        saveButton.setBackground(new Color(235, 87, 87));
+        saveButton.setForeground(Color.WHITE);
+        saveButton.setPreferredSize(new Dimension(50, 40));
+        saveButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        saveButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Handle save action
+                JOptionPane.showMessageDialog(SettingsUI.this, "Settings saved successfully.");
+            }
+        });
+
+// Adding components to the main panel
+        mainPanel.add(autoStartCheckBox);
+        mainPanel.add(hideAppCheckBox);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        mainPanel.add(showInLabel);
+        mainPanel.add(showInComboBox);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        mainPanel.add(screenshotNotificationCheckBox);
+        mainPanel.add(timeTrackingReminderCheckBox);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        mainPanel.add(timeTrackingLabel);
+        mainPanel.add(timeTrackingSpinner);
+        mainPanel.add(minutesLabel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        mainPanel.add(timeZoneLabel);
+        mainPanel.add(timeZoneComboBox);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 20)));
+        mainPanel.add(languageLabel);
+        mainPanel.add(languagePanel);
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 30)));
+        mainPanel.add(saveButton);
+
+// Setting the main panel as the content pane
+        setContentPane(mainPanel);
+        setVisible(true);
+    }
+
+    // Helper method to create a JCheckBox with consistent styling
+    private JCheckBox createCheckBox(String text) {
+        JCheckBox checkBox = new JCheckBox(text);
+        checkBox.setForeground(Color.WHITE);
+        checkBox.setBackground(new Color(12, 42, 56));
+        checkBox.setFocusPainted(false);
+        checkBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return checkBox;
+    }
+
+    // Helper method to create a JLabel with consistent styling
+    private JLabel createLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setForeground(Color.WHITE);
+        label.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return label;
+    }
+
+    // Helper method to create a JRadioButton with consistent styling
+    private JRadioButton createRadioButton(String text) {
+        JRadioButton radioButton = new JRadioButton(text);
+        radioButton.setForeground(Color.WHITE);
+        radioButton.setBackground(new Color(12, 42, 56));
+        radioButton.setFocusPainted(false);
+        return radioButton;
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new SettingsUI();
+            }
+        });
+    }
+}
+

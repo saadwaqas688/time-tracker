@@ -1,0 +1,236 @@
+package org.example;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.sql.*;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+
+public class TaskManager extends JFrame {
+
+    private static final int UPDATE_INTERVAL_MS = 1000; // 1 second
+    private static final String DB_URL = "jdbc:sqlite:tasks.db";
+
+    private final Map<Integer, TaskData> tasks = new HashMap<>();
+    private Integer currentRunningTaskId = null;
+
+    private final JLabel task1Label = new JLabel("Task 1: 0 s");
+    private final JLabel task2Label = new JLabel("Task 2: 0 s");
+    private final JLabel task3Label = new JLabel("Task 3: 0 s");
+
+    public TaskManager() {
+        setTitle("Task Manager");
+        setSize(400, 300);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new GridLayout(5, 2));
+
+        JButton task1StartButton = new JButton("Start Task 1");
+        JButton task1StopButton = new JButton("Stop Task 1");
+        JButton task2StartButton = new JButton("Start Task 2");
+        JButton task2StopButton = new JButton("Stop Task 2");
+        JButton task3StartButton = new JButton("Start Task 3");
+        JButton task3StopButton = new JButton("Stop Task 3");
+
+        add(task1StartButton);
+        add(task1StopButton);
+        add(task2StartButton);
+        add(task2StopButton);
+        add(task3StartButton);
+        add(task3StopButton);
+        add(task1Label);
+        add(task2Label);
+        add(task3Label);
+
+        task1StartButton.addActionListener(new TaskActionListener(1, true));
+        task1StopButton.addActionListener(new TaskActionListener(1, false));
+        task2StartButton.addActionListener(new TaskActionListener(2, true));
+        task2StopButton.addActionListener(new TaskActionListener(2, false));
+        task3StartButton.addActionListener(new TaskActionListener(3, true));
+        task3StopButton.addActionListener(new TaskActionListener(3, false));
+
+        // Initialize database and load tasks
+        initializeDatabase();
+        loadTasksFromDatabase();
+
+        Timer updateTimer = new Timer(UPDATE_INTERVAL_MS, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                updateTasks();
+                saveTasksToDatabase();
+                updateLabels();
+            }
+        });
+        updateTimer.start();
+    }
+
+    private class TaskData {
+        long timeStamp;
+        boolean isRunning;
+        long timeSpent;
+
+        TaskData(long timeStamp, boolean isRunning, long timeSpent) {
+            this.timeStamp = timeStamp;
+            this.isRunning = isRunning;
+            this.timeSpent = timeSpent;
+        }
+    }
+
+    private class TaskActionListener implements ActionListener {
+        private final int taskId;
+        private final boolean start;
+
+        TaskActionListener(int taskId, boolean start) {
+            this.taskId = taskId;
+            this.start = start;
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            long currentTime = Instant.now().toEpochMilli();
+
+            if (start) {
+                if (currentRunningTaskId != null && !currentRunningTaskId.equals(taskId)) {
+                    stopTask(currentRunningTaskId, currentTime);
+                }
+
+                // Start new task
+                TaskData existingTaskData = tasks.get(taskId);
+                if (existingTaskData == null) {
+                    existingTaskData = new TaskData(currentTime, true, 0);
+                } else {
+                    existingTaskData.isRunning = true;
+                    existingTaskData.timeStamp = currentTime;
+                }
+                tasks.put(taskId, existingTaskData);
+                currentRunningTaskId = taskId;
+
+                // Save immediately to database
+                saveTasksToDatabase();
+
+                System.out.println("Started: Task " + taskId);
+            } else {
+                if (currentRunningTaskId != null && currentRunningTaskId.equals(taskId)) {
+                    stopTask(taskId, currentTime);
+                } else {
+                    System.out.println("Task " + taskId + " is not running.");
+                }
+            }
+        }
+    }
+
+    private void stopTask(int taskId, long currentTime) {
+        TaskData taskData = tasks.get(taskId);
+        if (taskData != null && taskData.isRunning) {
+            taskData.isRunning = false;
+            taskData.timeSpent += (currentTime - taskData.timeStamp) / 1000; // convert ms to s
+            taskData.timeStamp = currentTime;
+            tasks.put(taskId, taskData);
+            System.out.println("Stopped: Task " + taskId + " - Total Time: " + taskData.timeSpent + " s");
+            currentRunningTaskId = null;
+        }
+    }
+
+    private void updateTasks() {
+        long currentTime = Instant.now().toEpochMilli();
+        for (Map.Entry<Integer, TaskData> entry : tasks.entrySet()) {
+            TaskData taskData = entry.getValue();
+            if (taskData.isRunning) {
+                taskData.timeSpent += (currentTime - taskData.timeStamp) / 1000; // convert ms to s
+                taskData.timeStamp = currentTime;
+            }
+        }
+    }
+
+    private void updateLabels() {
+        task1Label.setText("Task 1: " + tasks.getOrDefault(1, new TaskData(0, false, 0)).timeSpent + " s");
+        task2Label.setText("Task 2: " + tasks.getOrDefault(2, new TaskData(0, false, 0)).timeSpent + " s");
+        task3Label.setText("Task 3: " + tasks.getOrDefault(3, new TaskData(0, false, 0)).timeSpent + " s");
+    }
+
+    private void initializeDatabase() {
+        try (Connection conn = DriverManager.getConnection(DB_URL)) {
+            if (conn != null) {
+                try (Statement stmt = conn.createStatement()) {
+                    String sql = "CREATE TABLE IF NOT EXISTS tasks (" +
+                            "id INTEGER PRIMARY KEY," +
+                            "timeStamp INTEGER," +
+                            "isRunning INTEGER," + // SQLite does not have a separate Boolean type
+                            "timeSpent INTEGER" +
+                            ")";
+                    stmt.execute(sql);
+                    System.out.println("Database and tasks table initialized.");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error initializing database: " + e.getMessage());
+        }
+    }
+
+    private void loadTasksFromDatabase() {
+        System.out.println("Loading tasks from database...");
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT * FROM tasks")) {
+
+            tasks.clear();
+
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                long timeStamp = rs.getLong("timeStamp");
+                boolean isRunning = rs.getInt("isRunning") == 1;
+                long timeSpent = rs.getLong("timeSpent");
+
+                TaskData taskData = new TaskData(timeStamp, isRunning, timeSpent);
+                tasks.put(id, taskData);
+
+                if (isRunning) {
+                    currentRunningTaskId = id;
+                }
+            }
+
+            System.out.println("Tasks loaded from database.");
+        } catch (SQLException e) {
+            System.err.println("Error loading tasks from database: " + e.getMessage());
+        }
+    }
+
+    private void saveTasksToDatabase() {
+        System.out.println("Saving tasks to database...");
+        try (Connection conn = DriverManager.getConnection(DB_URL)) {
+            conn.setAutoCommit(false); // Start transaction
+
+            try (PreparedStatement pstmt = conn.prepareStatement(
+                    "REPLACE INTO tasks (id, timeStamp, isRunning, timeSpent) VALUES (?, ?, ?, ?)")) {
+                for (Map.Entry<Integer, TaskData> entry : tasks.entrySet()) {
+                    int id = entry.getKey();
+                    TaskData taskData = entry.getValue();
+
+                    pstmt.setInt(1, id);
+                    pstmt.setLong(2, taskData.timeStamp);
+                    pstmt.setInt(3, taskData.isRunning ? 1 : 0);
+                    pstmt.setLong(4, taskData.timeSpent);
+                    pstmt.addBatch();
+                }
+                pstmt.executeBatch();
+                conn.commit(); // Commit transaction
+
+                System.out.println("Tasks saved to database.");
+            } catch (SQLException e) {
+                conn.rollback(); // Rollback transaction on error
+                throw e;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error saving tasks to database: " + e.getMessage());
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            TaskManager tm = new TaskManager();
+            tm.setVisible(true);
+        });
+    }
+}
