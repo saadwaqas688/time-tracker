@@ -1,5 +1,6 @@
 package org.example;
 
+
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef;
 import org.jnativehook.GlobalScreen;
@@ -18,16 +19,20 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
+
+
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 
+
 public class GlobalEventListener implements NativeKeyListener, NativeMouseMotionListener {
 
     private static final String LOG_FILE = "user_activity.log";
     private static final String SCREENSHOT_DIR = "screenshots";
-    private static final long SCREEN_SHOT_TAKING_TIME = 18000;
+    private static final long SCREEN_SHOT_TAKING_TIME = 5000;
+
 
     private BufferedWriter writer;
     private int mouseMoveCount = 0;
@@ -101,22 +106,83 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
                     e.printStackTrace();
                 }
             }
-        }, 0, SCREEN_SHOT_TAKING_TIME); // 180000 ms = 3 minutes
+        }, 0, SCREEN_SHOT_TAKING_TIME); // 15000 ms = 15 seconds
     }
 
+//    private String getFocusedWindowTitle() {
+//        try {
+//            // Run xprop to get the ID of the currently active window
+//            Process process = Runtime.getRuntime().exec("xprop -root _NET_ACTIVE_WINDOW");
+//            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+//            String line = reader.readLine();
+//
+//            if (line != null) {
+//                // Extract window ID from the output
+//                String windowId = line.split(" ")[line.split(" ").length - 1];
+//
+//                // Run xprop to get the name of the window using its ID
+//                Process windowProcess = Runtime.getRuntime().exec("xprop -id " + windowId + " WM_NAME");
+//                BufferedReader windowReader = new BufferedReader(new InputStreamReader(windowProcess.getInputStream()));
+//                String windowTitle = windowReader.readLine();
+//
+//                if (windowTitle != null) {
+//                    String title = windowTitle.split("=")[1].trim().replace("\"", "");
+//                    String[] parts = title.split(" - ");
+//                    return parts[0].trim();
+//                }
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//        return "Unknown";
+//    }
+
     private String getFocusedWindowTitle() {
-        // Linux-specific code using xprop to get the active window title
-        // This needs to be replaced with Windows-specific code.
+        String osName = System.getProperty("os.name").toLowerCase();
+        if (osName.contains("win")) {
+            return getFocusedWindowTitleWindows();
+        } else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) {
+            return getFocusedWindowTitleLinux();
+        }
+        return "Unknown";
+    }
 
-        // Example Windows code (requires JNA library):
+    private String getFocusedWindowTitleLinux() {
+        try {
+            // Run xprop to get the ID of the currently active window
+            Process process = Runtime.getRuntime().exec("xprop -root _NET_ACTIVE_WINDOW");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line = reader.readLine();
 
+            if (line != null) {
+                // Extract window ID from the output
+                String windowId = line.split(" ")[line.split(" ").length - 1];
+
+                // Run xprop to get the name of the window using its ID
+                Process windowProcess = Runtime.getRuntime().exec("xprop -id " + windowId + " WM_NAME");
+                BufferedReader windowReader = new BufferedReader(new InputStreamReader(windowProcess.getInputStream()));
+                String windowTitle = windowReader.readLine();
+
+                if (windowTitle != null) {
+                    String title = windowTitle.split("=")[1].trim().replace("\"", "");
+                    String[] parts = title.split(" - ");
+                    return parts[0].trim();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "Unknown";
+    }
+
+    private String getFocusedWindowTitleWindows() {
         try {
             User32 user32 = User32.INSTANCE;
             WinDef.HWND hwnd = user32.GetForegroundWindow();
             int length = user32.GetWindowTextLength(hwnd);
             char[] windowTitle = new char[length + 1];
             user32.GetWindowText(hwnd, windowTitle, length + 1);
-            return new String(windowTitle);
+            return new String(windowTitle).trim();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -160,6 +226,8 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
         // Optional handling for mouse drag events
     }
 
+
+
     // Method to calculate idle time
     public long getIdleTime() {
         return System.currentTimeMillis() - lastActivityTime;
@@ -169,6 +237,7 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
     public synchronized String getCounts() {
         return "Mouse Moves: " + mouseMoveCount + ", Key Presses: " + keyPressCount;
     }
+
 
     private void takeScreenshots() {
         try {
@@ -198,3 +267,4 @@ public class GlobalEventListener implements NativeKeyListener, NativeMouseMotion
         }
     }
 }
+

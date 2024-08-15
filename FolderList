@@ -43,8 +43,6 @@ public class FolderList extends JFrame {
     private long lastDatabaseUpdateForGlobalTimer = 0; // Field to track the last database update time
 
     private static final long UPDATE_INTERVAL_MS = 10000;
-    private static final long IDLE_TIME_TRACKING = 300000;
-
     private static final String DB_URL = "jdbc:sqlite:app.db";
 
 
@@ -60,22 +58,20 @@ public class FolderList extends JFrame {
 
     private long elapsedTimeBeforeStop = 0;
 
-    //
-
     /* Base colors */
-    public static final Color SECONDARY_COLOR = new Color(0, 36, 51);
-    public static final Color PRIMARY_COLOR = new Color(3, 50, 70);
+    public static final Color SECONDARY_COLOR = new Color(0, 36, 51); // color of componentes
+    public static final Color PRIMARY_COLOR = new Color(3, 50, 70); // color of main window
     public static final Color PRIMARY_TEXT_COLOR = new Color(255, 255, 255);
     public static final Color SECONDARY_TEXT_COLOR = new Color(160, 172, 187);
 
 
     /* Status colors */
-    public static final Color SUCCESS_COLOR = new Color(17, 235, 130);
-    public static final Color INFO_COLOR = new Color(122, 142, 248);
-    public static final Color WARNING_COLOR = new Color(244, 162, 97);
-    public static final Color ERROR_COLOR = new Color(251, 93, 93);
+    public static final Color SUCCESS_COLOR = new Color(17, 235, 130);//Completed
+    public static final Color INFO_COLOR = new Color(122, 142, 248);//Inprogress
+    public static final Color WARNING_COLOR = new Color(244, 162, 97);//Review
+    public static final Color ERROR_COLOR = new Color(251, 93, 93);//Todo
     public static final Color ACCENT_COLOR = new Color(231, 111, 81);
-    private static final Color DARK_ORANGE = new Color(193,193,215);
+    private static final Color DARK_ORANGE = new Color(3,50,90);
     //
 
     private static final Color LIGHT_BLUE = new Color(173, 216, 230);
@@ -94,6 +90,8 @@ public class FolderList extends JFrame {
     private JTable taskTable;
 
     private static final int MARGIN_SIZE = 5;
+    private static final long IDLE_TIME_TRACKING = 300000;
+
     //
 
     private Timer idleTimer;
@@ -109,7 +107,15 @@ public class FolderList extends JFrame {
     private GlobalEventListener listener;
     private boolean isDefaultSelectedTaskRunning;
     private User user;
+    private JPanel settingsPanel;  // Panel to hold the Settings UI
+    private JPanel centerPanel;  // Panel to hold the Settings UI
+    private JPanel timerPanel;  // Panel to hold the Settings UI
+    private JPanel searchProjectPanel;  // Panel to hold the Settings UI
+    private JPanel searchPanel;  // Panel to hold the Settings UI
+
     private final StatusWindow statusWindow = new StatusWindow(this);
+
+
 
 
     FolderList(User user) {
@@ -127,11 +133,17 @@ public class FolderList extends JFrame {
         addSidePanel(mainPanel);
 
 
-        JPanel centerPanel = createCenterPanel();
+         centerPanel = createCenterPanel();
 
 
         centerPanel.add(createTimerPanel());
 
+        centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE));
+
+
+        // Create and add Settings UI to the center panel
+        settingsPanel = createSettingsPanel();
+        centerPanel.add(settingsPanel);
         centerPanel.add(Box.createVerticalStrut(MARGIN_SIZE));
 
         // Add Project Panel
@@ -197,8 +209,6 @@ public class FolderList extends JFrame {
         centerPanel.add(createTaskPanel());
         mainPanel.add(centerPanel, BorderLayout.CENTER);
 
-
-
         add(mainPanel, BorderLayout.CENTER);
 
         setVisible(true);
@@ -215,28 +225,105 @@ public class FolderList extends JFrame {
         }
 
     }
+
     private static class StatusWindow extends JDialog {
         private final JLabel statusLabel = new JLabel("No task is running");
         private final JButton startButton = new JButton();
         private final JButton stopButton = new JButton();
         private final FolderList outerClassInstance;  // Reference to outer class
+        // Variables to store the initial mouse position
+        private Point initialClick;
 
 
         StatusWindow(FolderList outerClassInstance) {
-
             this.outerClassInstance = outerClassInstance;  // Initialize reference
 
             setTitle("Task Status");
+
             // Convert inches to pixels
-            int widthInPixels = (int) (8 * 96);  // 4 inches to provide more width
-            int heightInPixels = (int) (1 * 96);  // 0.5 inches
+            int widthInPixels = (int) (6 * 96);  // 8 inches to provide more width
+            int heightInPixels = (int) (0.4 * 96);  // 1 inch
 
             setSize(widthInPixels, heightInPixels);
             setLayout(new FlowLayout(FlowLayout.LEFT)); // Use FlowLayout to arrange buttons and label
 
             // Set background color to black and text color to white
-            getContentPane().setBackground(Color.BLACK);
-            statusLabel.setForeground(Color.WHITE);
+            getContentPane().setBackground(SECONDARY_COLOR);
+            statusLabel.setForeground(PRIMARY_TEXT_COLOR);
+
+            // Hide the title bar
+            setUndecorated(true);
+
+            // Add a custom close button
+            JButton closeButton = new JButton("\u2716"); // Unicode for a cross icon
+            closeButton.setForeground(Color.WHITE);
+            closeButton.setBackground(Color.BLACK);
+            closeButton.setBorder(BorderFactory.createEmptyBorder());
+            closeButton.setFocusPainted(false); // Remove the focus border
+
+            // Add an action listener to the close button
+            closeButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    dispose(); // Close the window
+                }
+            });
+
+            // Add a custom drag button
+            JButton dragButton = new JButton("\u2630"); // Unicode for a drag icon (like ☰)
+            dragButton.setForeground(Color.WHITE);
+            dragButton.setBackground(Color.BLACK);
+            dragButton.setBorder(BorderFactory.createEmptyBorder());
+            dragButton.setFocusPainted(false);
+
+            // Add a mouse listener to enable dragging the window
+            dragButton.addMouseListener(new MouseAdapter() {
+                public void mousePressed(MouseEvent e) {
+                    initialClick = e.getPoint();
+                    getComponentAt(initialClick); // Remember the initial click location
+                }
+            });
+
+            dragButton.addMouseMotionListener(new MouseMotionAdapter() {
+                @Override
+                public void mouseDragged(MouseEvent e) {
+                    // Get the location of the window
+                    int thisX = getLocation().x;
+                    int thisY = getLocation().y;
+
+                    // Determine how much the mouse moved since the initial click
+                    int xMoved = e.getX() - initialClick.x;
+                    int yMoved = e.getY() - initialClick.y;
+
+                    // Move window to this position
+                    int X = thisX + xMoved;
+                    int Y = thisY + yMoved;
+                    setLocation(X, Y);
+                }
+            });
+
+            // Add components to the window
+            add(dragButton);
+
+            add(closeButton);
+            add(statusLabel);
+
+            // Center the window on the screen
+            setLocationRelativeTo(null);
+
+//            this.outerClassInstance = outerClassInstance;  // Initialize reference
+//
+//            setTitle("Task Status");
+//            // Convert inches to pixels
+//            int widthInPixels = (int) (8 * 96);  // 4 inches to provide more width
+//            int heightInPixels = (int) (1 * 96);  // 0.5 inches
+//
+//            setSize(widthInPixels, heightInPixels);
+//            setLayout(new FlowLayout(FlowLayout.LEFT)); // Use FlowLayout to arrange buttons and label
+//
+//            // Set background color to black and text color to white
+//            getContentPane().setBackground(Color.BLACK);
+//            statusLabel.setForeground(Color.WHITE);
 
             // Load icons (adjust paths and sizes as needed)
             ImageIcon startIcon = loadImageIcon("icons/small-start-icon.png", 30, 30);
@@ -349,37 +436,6 @@ public class FolderList extends JFrame {
         statusWindow.updateStatus(status,currentTask);
     }
 //
-//    private static class StatusWindow extends JDialog {
-//        private final JLabel statusLabel = new JLabel("No task is running");
-//
-//        StatusWindow() {
-//            setTitle("Task Status");
-//            // Convert inches to pixels
-//            int widthInPixels = (int) (8 * 96);  // 4 inches to provide more width
-//            int heightInPixels = (int) (1 * 96);  // 0.5 inches
-//
-//            setSize(widthInPixels, heightInPixels);
-//            setLayout(new BorderLayout());
-//
-//            // Set background color to black and text color to white
-//            getContentPane().setBackground(Color.BLACK);
-//            statusLabel.setForeground(Color.WHITE);
-//
-//
-//            add(statusLabel, BorderLayout.CENTER);
-//            setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-//            setLocationRelativeTo(null); // Center on the screen
-//            setAlwaysOnTop(true); // Keep the status window on top
-//        }
-//
-//
-//        void updateStatus(String status) {
-//            statusLabel.setText(status);
-//            statusLabel.revalidate(); // Ensure the layout is updated
-//            statusLabel.repaint();    // Repaint the component to reflect changes
-//        }
-//
-//    }
 
     private JPanel createCenterPanel() {
         JPanel centerPanel = new JPanel();
@@ -398,7 +454,7 @@ public class FolderList extends JFrame {
 
 
     private JPanel createTimerPanel() {
-        JPanel timerPanel = new JPanel();
+        timerPanel = new JPanel();
         timerPanel.setPreferredSize(new Dimension(getWidth(), 60)); // Fixed height of 48 pixels
         timerPanel.setBackground(SECONDARY_COLOR);
         timerPanel.setLayout(new BorderLayout());
@@ -513,8 +569,57 @@ public class FolderList extends JFrame {
 
         return timerPanel;
     }
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    // Method to create the settings panel
+    private JPanel createSettingsPanel() {
+        SettingsUI settingsUI = new SettingsUI();
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(PRIMARY_COLOR);
+        panel.add(settingsUI.getMainPanel(), BorderLayout.CENTER);
+        panel.setVisible(false); // Initially, the settings panel is hidden
+        return panel;
+    }
+
+    // Method to show the dashboard
+    private void showDashboard() {
 
 
+        settingsPanel.setVisible(false);  // Panel to hold the Settings UI
+//        centerPanel.setVisible(true);  // Panel to hold the Settings UI
+//        timerPanel.setVisible(true);  // Panel to hold the Settings UI
+        searchProjectPanel.setVisible(true);  // Panel to hold the Settings UI
+        folderScrollPane.setVisible(true);
+        searchPanel.setVisible(true);  // Panel to hold the Settings UI
+        taskPanelR.setVisible(true);
+    }
+
+    // Method to show the settings
+    private void showSettings() {
+        settingsPanel.setVisible(true);  // Panel to hold the Settings UI
+//        centerPanel.setVisible(true);  // Panel to hold the Settings UI
+//        timerPanel.setVisible(t);  // Panel to hold the Settings UI
+        searchProjectPanel.setVisible(false);  // Panel to hold the Settings UI
+         folderScrollPane.setVisible(false);
+        searchPanel.setVisible(false);  // Panel to hold the Settings UI
+        taskPanelR.setVisible(false);
+
+    }
     //
     //
     //
@@ -534,7 +639,7 @@ public class FolderList extends JFrame {
     //
     //search project panel
     private JPanel createSearchProjectPanel() {
-        JPanel searchProjectPanel = new JPanel();
+        searchProjectPanel = new JPanel();
         searchProjectPanel.setPreferredSize(new Dimension(getWidth(), 60)); // Fixed height of 60 pixels
         searchProjectPanel.setBackground(SECONDARY_COLOR);
         searchProjectPanel.setLayout(new BorderLayout());
@@ -702,6 +807,23 @@ public class FolderList extends JFrame {
         label2.setAlignmentX(Component.CENTER_ALIGNMENT);
         label3.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // Add MouseListener to label2 (Dashboard)
+        label2.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                showDashboard();
+            }
+        });
+
+        // Add MouseListener to label3 (Settings)
+        label3.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                showSettings();
+            }
+        });
+
+
 
         // Add spacing and labels to the panel
         sidePanel.add(Box.createVerticalStrut(30)); // Space at the top
@@ -723,31 +845,36 @@ public class FolderList extends JFrame {
     }
 
     // Method to create the folder panel with scroll functionality
+
     private JScrollPane createFolderPanel() {
         folderPanel = new JPanel();
-        folderPanel.setPreferredSize(new Dimension(getWidth(), 150));
+        folderPanel.setPreferredSize(new Dimension(getWidth(), 180));
         folderPanel.setBackground(SECONDARY_COLOR);
         folderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        folderPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
 
         // Create JScrollPane for folderPanel
-        JScrollPane folderScrollPane = new JScrollPane(folderPanel);
+        folderScrollPane = new JScrollPane(folderPanel);
         folderScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
         folderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
         folderScrollPane.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
 
         folderScrollPane.getViewport().setOpaque(false);
         folderScrollPane.setOpaque(false);
-        folderScrollPane.setBackground(SECONDARY_COLOR);
+        folderScrollPane.setBackground(new Color(0, 0, 0, 0)); // Fully transparent background
 
         // Customize the horizontal scrollbar
         JScrollBar horizontalScrollBar = folderScrollPane.getHorizontalScrollBar();
         horizontalScrollBar.setUnitIncrement(16); // Adjust horizontal scrollbar sensitivity
+        horizontalScrollBar.setBackground(SECONDARY_COLOR);
+
+
         horizontalScrollBar.setUI(new BasicScrollBarUI() {
+            private final int thumbSize = (int) (2 * 3.78); // Convert 1 mm to pixels
+            private final int trackSize = (int) (2 * 3.78); // Convert 1 mm to pixels
             @Override
             protected void configureScrollBarColors() {
-                this.thumbColor = SECONDARY_COLOR; // Set thumb color
-                this.trackColor = Color.GRAY;      // Set track color (optional)
+                this.thumbColor = PRIMARY_COLOR;
+                this.trackColor = SECONDARY_COLOR;
             }
 
             @Override
@@ -765,15 +892,94 @@ public class FolderList extends JFrame {
                 button.setPreferredSize(new Dimension(0, 0));
                 button.setMinimumSize(new Dimension(0, 0));
                 button.setMaximumSize(new Dimension(0, 0));
+                button.setOpaque(false);
+                button.setContentAreaFilled(false);
+                button.setBorder(BorderFactory.createEmptyBorder());
                 return button;
+            }
+
+            @Override
+            protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setColor(thumbColor);
+                g2.fillRoundRect(thumbBounds.x, thumbBounds.y, thumbBounds.width, thumbSize, thumbSize, thumbSize); // Use thumbSize for corner radius
+                g2.dispose();
+            }
+
+            @Override
+            protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setColor(trackColor);
+                g2.fillRoundRect(trackBounds.x, trackBounds.y, trackBounds.width, trackSize, trackSize, trackSize); // Use trackSize for corner radius
+                g2.dispose();
+            }
+
+            @Override
+            public Dimension getPreferredSize(JComponent c) {
+                return new Dimension(16, 8); // Set width and height here
             }
         });
 
         // Round corners of the JScrollPane
-        folderScrollPane.setViewportBorder(BorderFactory.createLineBorder(SECONDARY_COLOR, 2, true)); // True for rounded corners
+        folderScrollPane.setViewportBorder(BorderFactory.createLineBorder(SECONDARY_COLOR, 1, true)); // True for rounded corners
 
         return folderScrollPane;
     }
+
+
+
+
+//    private JScrollPane createFolderPanel() {
+//        folderPanel = new JPanel();
+//        folderPanel.setPreferredSize(new Dimension(getWidth(), 180));
+//        folderPanel.setBackground(SECONDARY_COLOR);
+//        folderPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
+////        folderPanel.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+//
+//        // Create JScrollPane for folderPanel
+//        folderScrollPane = new JScrollPane(folderPanel);
+//        folderScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+//        folderScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+//        folderScrollPane.setBorder(BorderFactory.createEmptyBorder(MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE, MARGIN_SIZE));
+//
+//        folderScrollPane.getViewport().setOpaque(false);
+//        folderScrollPane.setOpaque(false);
+//        folderScrollPane.setBackground(Color.red);
+//
+//        // Customize the horizontal scrollbar
+//        JScrollBar horizontalScrollBar = folderScrollPane.getHorizontalScrollBar();
+//        horizontalScrollBar.setUnitIncrement(16); // Adjust horizontal scrollbar sensitivity
+//        horizontalScrollBar.setUI(new BasicScrollBarUI() {
+//            @Override
+//            protected void configureScrollBarColors() {
+//                this.thumbColor = Color.GREEN; // Set thumb color
+//                this.trackColor = Color.red;      // Set track color (optional)
+//            }
+//
+//            @Override
+//            protected JButton createDecreaseButton(int orientation) {
+//                return createInvisibleButton(); // Hide the left arrow button
+//            }
+//
+//            @Override
+//            protected JButton createIncreaseButton(int orientation) {
+//                return createInvisibleButton(); // Hide the right arrow button
+//            }
+//
+//            private JButton createInvisibleButton() {
+//                JButton button = new JButton();
+//                button.setPreferredSize(new Dimension(0, 0));
+//                button.setMinimumSize(new Dimension(0, 0));
+//                button.setMaximumSize(new Dimension(0, 0));
+//                return button;
+//            }
+//        });
+//
+//        // Round corners of the JScrollPane
+//        folderScrollPane.setViewportBorder(BorderFactory.createLineBorder(SECONDARY_COLOR, 1, true)); // True for rounded corners
+//
+//        return folderScrollPane;
+//    }
 
 
     private static ImageIcon loadImageIcon(String path, int width, int height) {
@@ -823,7 +1029,7 @@ public class FolderList extends JFrame {
     //
     //
     private JPanel createSearchPanel() {
-        JPanel searchPanel = new JPanel();
+        searchPanel = new JPanel();
         searchPanel.setPreferredSize(new Dimension(getWidth(), 60)); // Fixed height of 60 pixels
         searchPanel.setBackground(SECONDARY_COLOR);
         searchPanel.setLayout(new BorderLayout());
@@ -1655,20 +1861,53 @@ public class FolderList extends JFrame {
         private CustomStatusComboBox statusComboBox;
 
         public StatusCellRenderer() {
-            setLayout(new FlowLayout(FlowLayout.LEFT));
+            setLayout(new FlowLayout(FlowLayout.CENTER));
             statusComboBox = new CustomStatusComboBox();
 
             // Set the background color to black or primary color
-            setBackground(PRIMARY_COLOR);
-            statusComboBox.setForeground(Color.WHITE); // Set text color to white for better contrast
+//            setBackground(Color.green);
+//            statusComboBox.setForeground(Color.blue); // Set text color to white for better contrast
 
             add(statusComboBox);
         }
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+//            if (value instanceof String) {
+//                statusComboBox.setSelectedItem(value);
+//
+//                // Get the Task object from the first column
+//                Task task = (Task) table.getValueAt(row, 0);
+//                statusComboBox.putClientProperty("task", task);
+//            } else {
+//                // Handle unexpected value types
+//                System.err.println("Unexpected value type: " + (value != null ? value.getClass().getName() : "null"));
+//                statusComboBox.setSelectedItem(null); // Clear selection or set to default
+//                statusComboBox.putClientProperty("task", null);
+//            }
             if (value instanceof String) {
-                statusComboBox.setSelectedItem(value);
+                String status = (String) value;
+                statusComboBox.setSelectedItem(status);
+                setBackground(PRIMARY_COLOR);
+
+                // Set the foreground color based on the status
+                switch (status) {
+                    case "Completed":
+                        statusComboBox.setForeground(SUCCESS_COLOR);
+                        break;
+                    case "ToDo":
+                        statusComboBox.setForeground(ERROR_COLOR);
+                        break;
+                    case "InProgress":
+                        statusComboBox.setForeground(INFO_COLOR);
+                        break;
+                    case "Review":
+                        statusComboBox.setForeground(WARNING_COLOR);
+                        break;
+                    default:
+                        statusComboBox.setForeground(Color.WHITE); // Default color
+                        break;
+                }
 
                 // Get the Task object from the first column
                 Task task = (Task) table.getValueAt(row, 0);
@@ -1681,13 +1920,14 @@ public class FolderList extends JFrame {
             }
 
             // Handle selection and focus styles
-            if (isSelected) {
-                setBackground(table.getSelectionBackground());
-                statusComboBox.setForeground(table.getSelectionForeground());
-            } else {
-                setBackground(table.getBackground());
-                statusComboBox.setForeground(Color.WHITE); // Ensure consistent text color
-            }
+//            if (isSelected) {
+//                setBackground(Color.red);
+//                statusComboBox.setForeground(Color.green);
+//            } else {
+//                setBackground(PRIMARY_COLOR);
+////                statusComboBox.setForeground(Color.red); // Ensure consistent text color
+//
+//            }
 
             setOpaque(true);
             return this;
@@ -1850,32 +2090,6 @@ public class FolderList extends JFrame {
     }
 
 
-//    private class StatusCellEditor extends AbstractCellEditor implements TableCellEditor {
-//
-//        private CustomStatusComboBox comboBox;
-//        public StatusCellEditor() {
-//            comboBox = new CustomStatusComboBox();
-////            comboBox = new JComboBox<>(new String[]{"ToDo", "InProgress", "Completed", "Review"}); // Match options with renderer
-//            comboBox.addActionListener(new ActionListener() {
-//                @Override
-//                public void actionPerformed(ActionEvent e) {
-//                    fireEditingStopped(); // Notify that editing is complete
-//                }
-//            });
-//        }
-//
-//        @Override
-//        public Object getCellEditorValue() {
-//            return comboBox.getSelectedItem();
-//        }
-//
-//        @Override
-//        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-//            comboBox.setSelectedItem(value);
-//            return comboBox;
-//        }
-//    }
-
 
 
     //
@@ -1918,6 +2132,8 @@ public class FolderList extends JFrame {
 
             int rowsUpdated = pstmt.executeUpdate();
             System.out.println("Update executed. Rows updated: " + rowsUpdated);
+            populateProjects(projects);
+            showTasks(getTasksByProjectId(selectedProjectId));
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -1955,7 +2171,7 @@ public class FolderList extends JFrame {
     }
 
 
-    public void startTimer(Task task) {
+    private void startTimer(Task task) {
 //        initializeOrUpdateDatabase();
         System.out.println("Start timer: " + task.getName());
 
@@ -1986,7 +2202,6 @@ public class FolderList extends JFrame {
                 SwingUtilities.invokeLater(() -> updateTimeSpent());
             }
         }, 1000, 1000);
-
     }
 
     private void stopTimer() {
@@ -2031,6 +2246,7 @@ public class FolderList extends JFrame {
             }
 
             updateStatusWindow();
+
         }
     }
 
@@ -2242,7 +2458,7 @@ public class FolderList extends JFrame {
                 long idleTime = listener.getIdleTime();
                 System.out.println("Idle Time: " + idleTime / 1000 + " seconds");
 
-                if (idleTime >=IDLE_TIME_TRACKING) {  // 15 seconds idle time
+                if (idleTime >= IDLE_TIME_TRACKING) {  // 15 seconds idle time
                     idleTimer.cancel();  // Stop further checks during the countdown
                     SwingUtilities.invokeLater(() -> showIdleAlert());
                 }
@@ -2337,7 +2553,7 @@ public class FolderList extends JFrame {
 
     private void onWindowResize() {
         int frameWidth = getWidth();
-        folderScrollPane.setBounds(20, 100, frameWidth - 40, 100);
+//        folderScrollPane.setBounds(20, 100, frameWidth - 40, 100);
         taskScrollPane.setBounds(20, 250, frameWidth - 40, getHeight() - 310);
         addButton.setBounds(frameWidth - 130, 10, 120, 30);
 //        currentTaskPanel.setBounds(20, 10, frameWidth - 180, 80);
